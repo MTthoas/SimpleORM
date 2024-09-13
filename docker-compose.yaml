@@ -1,0 +1,22 @@
+version: '3.9'
+
+services:
+  postgresdb:
+    image: postgres:latest
+    container_name: postgresql-auth-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin      # Remplacez par le nom d'utilisateur souhaité
+      POSTGRES_PASSWORD: adminpwd  # Remplacez par le mot de passe souhaité
+      POSTGRES_DB: db   # Remplacez par le nom de la base de données souhaité
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgresql-auth-db:/var/lib/postgresql/data
+
+volumes:
+  postgresql-auth-db:
