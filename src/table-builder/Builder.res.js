@@ -2,7 +2,7 @@
 
 import * as PervasivesU from "rescript/lib/es6/pervasivesU.js";
 
-function _parseSchemaType(schemaType) {
+function _typeToSql(schemaType) {
   switch (schemaType) {
     case "int" :
         return "INTEGER";
@@ -13,21 +13,52 @@ function _parseSchemaType(schemaType) {
   }
 }
 
+function _primaryKeyToSql(column) {
+  if (column.primaryKey) {
+    return " PRIMARY KEY";
+  } else {
+    return "";
+  }
+}
+
+function _optionalToSql(column) {
+  if (column.optionnal) {
+    return " NULL";
+  } else {
+    return " NOT NULL";
+  }
+}
+
+function _defaultToSql(column) {
+  var $$default = column.default;
+  if ($$default === "") {
+    return "";
+  } else {
+    return " DEFAULT " + $$default;
+  }
+}
+
+function _columnsToSql(schema) {
+  return schema.map(function (column) {
+                var schemaType = _typeToSql(column._type);
+                var primaryKey = _primaryKeyToSql(column);
+                var optionnal = _optionalToSql(column);
+                var $$default = _defaultToSql(column);
+                return "\t" + column.name + " " + schemaType + primaryKey + optionnal + $$default;
+              }).join(",\n");
+}
+
 function create(tableName, schema) {
-  console.log("Creating table: " + tableName);
-  var start = "CREATE TABLE " + tableName + " (";
-  var columns = schema.map(function (column) {
-          var val = _parseSchemaType(column._type);
-          var primaryKey = column.primaryKey ? " PRIMARY KEY" : "";
-          var optionnal = column.optionnal ? " NOT NULL" : "";
-          var $$default = column.default !== "" ? " DEFAULT " + column.default : "";
-          return column.name + " " + val + primaryKey + optionnal + $$default;
-        }).join(", ");
-  return start + columns + ");";
+  var columnsToSql = _columnsToSql(schema);
+  return "CREATE TABLE " + tableName + " (\n" + columnsToSql + "\n);";
 }
 
 export {
-  _parseSchemaType ,
+  _typeToSql ,
+  _primaryKeyToSql ,
+  _optionalToSql ,
+  _defaultToSql ,
+  _columnsToSql ,
   create ,
 }
 /* No side effect */
