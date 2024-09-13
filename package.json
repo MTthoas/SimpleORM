@@ -1,0 +1,24 @@
+{
+  "name": "simple-orm",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "res:build": "rescript",
+    "res:clean": "rescript clean",
+    "res:dev": "rescript -w",
+    "dev": "nodemon --watch src --exec 'node src/app.res.js'",
+    "start": "node src/app.res.js"
+  },
+  "keywords": [
+    "rescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@rescript/core": "^1.6.0",
+    "rescript": "^11.1.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
