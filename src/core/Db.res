@@ -10,14 +10,14 @@ let connectToDb = () => {
     (),
   )
 
-  client
-  ->PgClient.connect()
+  PgClient.connect(client, ())
   ->Promise.then(_ => {
     Console.log("Connected to the database")
-    PgClient.end(client, ())
+    // Here we return the client, we doesnt close the connection
+    Js.Promise.resolve(client)
   })
   ->Promise.catch(e => {
     Console.error2("Failed to connect to the database", e)
-    Promise.resolve()
+    Js.Promise.reject(e)
   })
 }
