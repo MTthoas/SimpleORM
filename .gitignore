@@ -6,7 +6,3 @@
 package-lock.json
 bun.lockb
 migration
-
-# Add res.js files
-*.res.js
-**/*.res.js
