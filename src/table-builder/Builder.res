@@ -37,7 +37,15 @@ let _columnsToSql = (~schema: array<columnSchema>): string =>
   })
   ->Array.join(",\n")
 
-let create = (~tableName, ~schema) => {
+let createTable = (~tableName: string, ~schema: array<columnSchema>): string => {
   let columnsToSql = _columnsToSql(~schema)
   "CREATE TABLE " ++ tableName ++ " (\n" ++ columnsToSql ++ "\n);"
 }
+/*
+ Result with the input in Example.res:
+  CREATE TABLE users (
+        id INTEGER PRIMARY KEY NOT NULL DEFAULT '',
+        name TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT ''
+  )s;
+ */

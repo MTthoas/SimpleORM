@@ -1,6 +1,6 @@
 open Builder
 
-let userSchema = create(
+let userSchema = createTable(
   ~tableName="users",
   ~schema=[
     {
