@@ -1,18 +1,27 @@
 {
   "name": "simple-orm",
-  "sources": {
-    "dir": "src",
-    "subdirs": true
-  },
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    },
+    {
+      "dir": "test"
+    }
+  ],
   "package-specs": {
     "module": "esmodule",
     "in-source": true
   },
+  "uncurried": true,
   "suffix": ".res.js",
   "bs-dependencies": [
-    "@rescript/core"
+    "@rescript/core",
+    "rescript-bun"
   ],
   "bsc-flags": [
-    "-open RescriptCore"
+    "-open RescriptCore",
+    "-open RescriptBun",
+    "-open RescriptBun.Globals"
   ]
 }

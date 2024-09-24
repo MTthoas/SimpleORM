@@ -1,8 +1,9 @@
 {
   "name": "simple-orm",
   "version": "0.0.0",
-  "type": "module",
+  "main": "src/app.js",
   "scripts": {
+<<<<<<< HEAD
     "res:build": "rescript",
     "res:clean": "rescript clean",
     "res:dev": "rescript -w",
@@ -10,17 +11,29 @@
     "dev:bun:schema-builder": "bun --watch run src/table-builder/Example.res.js",
     "dev:bun": "bun --watch run src/app.res.js",
     "start": "node src/app.res.js"
+=======
+    "test": "bun test tests/*.test.*",
+    "dev:test": "bun run test --watch",
+    "build:rescript": "rescript build",
+    "build": "bun run build:rescript",
+    "dev:rescript": "rescript build -w",
+    "dev:app": "bun run --watch src/app.res.js",
+    "dev": "bun run build:rescript && concurrently 'bun:dev:*'"
+>>>>>>> 0ff84ba0cbd373e3c03e3a97dcbf804d725ee421
   },
   "keywords": [
-    "rescript"
+    "rescript",
+    "bun"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@graphile/logger": "^0.2.0",
     "@rescript/core": "^1.6.0",
+    "concurrently": "^9.0.1",
     "pg": "^8.12.0",
     "rescript": "^11.1.4",
+    "rescript-bun": "^0.5.0",
     "spacetime": "^7.6.1",
     "tsd": "^0.31.2",
     "uuid": "^10.0.0"

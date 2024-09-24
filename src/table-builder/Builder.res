@@ -42,10 +42,10 @@ let createTable = (~tableName: string, ~schema: array<columnSchema>): string => 
   "CREATE TABLE " ++ tableName ++ " (\n" ++ columnsToSql ++ "\n);"
 }
 /*
- Result with the input in Example.res:
-  CREATE TABLE users (
-        id INTEGER PRIMARY KEY NOT NULL DEFAULT '',
-        name TEXT NOT NULL DEFAULT '',
-        email TEXT NOT NULL DEFAULT ''
-  )s;
- */
+Result with the input in Example.res:
+CREATE TABLE users (
+      id INTEGER PRIMARY KEY NOT NULL DEFAULT '',
+      name TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT ''
+);
+*/
