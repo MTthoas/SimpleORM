@@ -6,18 +6,23 @@
       "subdirs": true
     },
     {
-      "dir": "test"
+      "dir": "tests"
+    },
+    {
+      "dir": "functions",
+      "subdirs": true
     }
   ],
   "package-specs": {
-    "module": "esmodule",
+    "module": "commonjs",
     "in-source": true
   },
   "uncurried": true,
   "suffix": ".res.js",
   "bs-dependencies": [
     "@rescript/core",
-    "rescript-bun"
+    "rescript-bun",
+    "@glennsl/rescript-jest"
   ],
   "bsc-flags": [
     "-open RescriptCore",

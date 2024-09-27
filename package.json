@@ -1,10 +1,9 @@
 {
   "name": "simple-orm",
-  "version": "0.0.0",
-  "main": "src/app.js",
+  "version": "1.0.0",
   "scripts": {
-    "test": "bun test tests/*.test.*",
-    "dev:test": "bun run test --watch",
+    "build:tests": "rescript build",
+    "test": "npm run build:tests && jest",
     "build:rescript": "rescript build",
     "build": "bun run build:rescript",
     "dev:rescript": "rescript build -w",
@@ -29,6 +28,7 @@
     "uuid": "^10.0.0"
   },
   "devDependencies": {
+    "@glennsl/rescript-jest": "^0.11.0",
     "nodemon": "^3.1.4"
   }
 }
