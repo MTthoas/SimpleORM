@@ -17,7 +17,14 @@ let mockPgClientConnectFailure: unit => Promise.t<unit> = () => {
 
 // Injecter les mocks dans PgClient
 @module("PgClient")
-external make: (~user: string, ~password: string, ~host: string, ~database: string, ~port: int, unit) => client = "make"
+external make: (
+  ~user: string,
+  ~password: string,
+  ~host: string,
+  ~database: string,
+  ~port: int,
+  unit,
+) => client = "make"
 
 @module("PgClient")
 external connect: (client, unit) => Promise.t<unit> = "connect"
@@ -26,12 +33,15 @@ external connect: (client, unit) => Promise.t<unit> = "connect"
 describe("connectToDb", () => {
   beforeAll(() => {
     // On mocke les méthodes de PgClient
-    JestJs.mockWithFactory("PgClient", () => {
-      {
-        "make": mockPgClientMake,
-        "connect": mockPgClientConnect
-      }
-    })
+    JestJs.mockWithFactory(
+      "PgClient",
+      () => {
+        {
+          "make": mockPgClientMake,
+          "connect": mockPgClientConnect,
+        }
+      },
+    )
   })
 
   afterEach(() => {

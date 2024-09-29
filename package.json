@@ -7,8 +7,9 @@
     "build:rescript": "rescript build",
     "build": "bun run build:rescript",
     "dev:rescript": "rescript build -w",
-    "dev:app": "bun run --watch src/app.res.js",
-    "dev": "bun run build:rescript && concurrently 'bun:dev:*'"
+    "dev:app": "bun run --watch functions/App.res.js",
+    "dev": "bun run build:rescript && bun run format && concurrently 'bun:dev:*'",
+    "format": "rescript format -all"
   },
   "keywords": [
     "rescript",

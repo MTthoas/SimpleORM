@@ -14,6 +14,4 @@ module Config = {
     database: "db",
     port: 5432,
   }
-
-  type client = PgBind.PgClient.t
 }

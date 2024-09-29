@@ -2,33 +2,92 @@ open PgBind
 open QueryBuilder
 
 module Repository = {
-  /*
-    Fonction générique pour trouver des enregistrements dans une table PostgreSQL avec des conditions WHERE et une limite optionnelles.
-    @param tableName: Le nom de la table.
-    @param where: Conditions WHERE optionnelles sous forme de tableau de tuples (champ, valeur).
-    @param limit: Limite optionnelle pour le nombre d'enregistrements retournés.
-  */
-  let find = (~tableName: string, ~where: option<array<(string, Query.Params.t)>>=?, ~limit: option<int>=?, client: PgClient.t) => {
-    let (_, params) = QueryBuilder._buildWhereClause(~where)
-    let statement = QueryBuilder._buildSelectQuery(~tableName, ~where, ~limit)
-    QueryBuilder._executeQuery(~statement, ~params, client)
+  exception InvalidTableName(string)
+  exception TableDoesNotExist(string)
+  exception InvalidLimit(int)
+  exception InvalidWhereCondition
+
+  /* Generic function to find records in a PostgreSQL table */
+  let find = async (
+    ~tableName: string,
+    ~where: option<array<(string, Query.Params.t)>>=?,
+    ~limit: option<int>=?,
+    client: PgClient.t,
+  ) => {
+    try {
+      let (_, params) = QueryBuilder._buildWhereClause(~where)
+      let statement = await QueryBuilder._buildSelectQuery(~tableName, ~where, ~limit, client)
+      let result = await QueryBuilder._executeQuery(~statement, ~params, client)
+      Promise.resolve(result.rows)
+    } catch {
+    | TableDoesNotExist(tableName) =>
+      let errorMsg = "Table " ++ tableName ++ " does not exist."
+      Promise.reject(Failure(errorMsg))
+    | InvalidLimit(limit) =>
+      let errorMsg = "Invalid limit: " ++ Js.Int.toString(limit)
+      Js.log("Error: " ++ errorMsg)
+      Promise.reject(Failure(errorMsg))
+    | InvalidTableName(message) =>
+      let errorMsg = "Invalid table name: " ++ message
+      Js.log("Error: " ++ errorMsg)
+      Promise.reject(Failure(errorMsg))
+    | InvalidWhereCondition =>
+      let errorMsg = "Invalid WHERE condition."
+      Js.log("Error: " ++ errorMsg)
+      Promise.reject(Failure(errorMsg))
+    | Failure(message) =>
+      Js.log("Error: " ++ message)
+      Promise.reject(Failure(message))
+    | Exn.Error(jsError) =>
+      let errorMessage = switch Exn.message(jsError) {
+      | Some(message) => message
+      | None => "Unknown JS error"
+      }
+      Js.log("Error: " ++ errorMessage)
+      Promise.reject(Failure(errorMessage))
+    | _ => Promise.reject(Failure("Unknown error"))
+    }
   }
 
-  let findOne = (~tableName: string, ~where: array<(string, Query.Params.t)>, client: PgClient.t) => {
-    find(~tableName, ~where=where, ~limit=1, client)
+  /* Find a single record */
+  let findOne = async (
+    ~tableName: string,
+    ~where: array<(string, Query.Params.t)>,
+    client: PgClient.t,
+  ) => {
+    find(~tableName, ~where, ~limit=1, client)
   }
 
-  let insert = (~tableName: string, ~fields: array<string>, ~values: array<Query.Params.t>, client: PgClient.t) => {
-    let statement = QueryBuilder._buildInsertQuery(~tableName, ~fields, ~values)
-    QueryBuilder._executeQuery(~statement, ~params=values, client)
+  /* Insert records into a PostgreSQL table */
+  let insert = async (
+    ~tableName: string,
+    ~fields: array<string>,
+    ~values: array<Query.Params.t>,
+    client: PgClient.t,
+  ) => {
+    let statement = await QueryBuilder._buildInsertQuery(~tableName, ~fields, ~values, client)
+    let insert = await QueryBuilder._executeQuery(~statement, ~params=values, client)
+    Promise.resolve(insert)
   }
 
-  let insertOne = (~tableName: string, ~fields: array<string>, ~values: array<Query.Params.t>, client: PgClient.t) => {
+  /* Insert a single record */
+  let insertOne = async (
+    ~tableName: string,
+    ~fields: array<string>,
+    ~values: array<Query.Params.t>,
+    client: PgClient.t,
+  ) => {
     insert(~tableName, ~fields, ~values, client)
   }
 
-  let save = (~tableName: string, ~fields: array<string>, ~values: array<Query.Params.t>, client: PgClient.t) => {
-    let statement = QueryBuilder._buildInsertQuery(~tableName, ~fields, ~values)
-    QueryBuilder._executeQuery(~statement, ~params=values, client)
+  /* Update a PostgreSQL table */
+  let save = async (
+    ~tableName: string,
+    ~fields: array<string>,
+    ~values: array<Query.Params.t>,
+    client: PgClient.t,
+  ) => {
+    let statement = await QueryBuilder._buildInsertQuery(~tableName, ~fields, ~values, client)
+    await QueryBuilder._executeQuery(~statement, ~params=values, client)
   }
 }

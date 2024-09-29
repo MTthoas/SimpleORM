@@ -14,7 +14,7 @@
     }
   ],
   "package-specs": {
-    "module": "commonjs",
+    "module": "esmodule",
     "in-source": true
   },
   "uncurried": true,
