@@ -3,13 +3,16 @@
   "version": "0.0.0",
   "main": "src/app.js",
   "scripts": {
+    "res:build": "rescript",
+    "res:clean": "rescript clean",
+    "res:dev": "rescript -w",
+    "dev:bun:schema-builder": "bun --watch run src/table-builder/Example.res.js",
+    "dev:bun": "bun --watch run src/app.res.js",
+    "start": "node src/app.res.js",
     "test": "bun test tests/*.test.*",
     "dev:test": "bun run test --watch",
-    "build:rescript": "rescript build",
-    "build": "bun run build:rescript",
-    "dev:rescript": "rescript build -w",
-    "dev:app": "bun run --watch src/app.res.js",
-    "dev": "bun run build:rescript && concurrently 'bun:dev:*'"
+    "dev": "bun run build:rescript && concurrently 'bun:dev:*'",
+    "dev:app": "bun run --watch src/app.res.js"
   },
   "keywords": [
     "rescript",
