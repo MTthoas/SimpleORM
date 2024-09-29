@@ -6,7 +6,6 @@
     "res:build": "rescript",
     "res:clean": "rescript clean",
     "res:dev": "rescript -w",
-    "dev:bun:schema-builder": "bun --watch run src/table-builder/Example.res.js",
     "dev:bun": "bun --watch run src/app.res.js",
     "start": "node src/app.res.js",
     "test": "bun test tests/*.test.*",

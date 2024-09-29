@@ -1,9 +1,15 @@
+type sqlType =
+  | Int
+  | String
+  | Enum(array<string>)
+
 type columnSchema = {
   name: string,
-  _type: string,
+  _type: sqlType,
   primaryKey: bool,
   optionnal: bool,
-  default: string,
+  default: option<string>,
+  unique: bool,
 }
 
 type tableSchema = {
