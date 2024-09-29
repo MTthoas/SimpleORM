@@ -9,3 +9,4 @@ migration
 # Add res.js files
 *.res.js
 **/*.res.js
+**/migration.sql

@@ -71,13 +71,22 @@ let _columnsToSql = (~schema: array<columnSchema>): string =>
     let optionnal = _optionalToSql(column)
     let default = _defaultToSql(column)
     switch default {
-    | Some(d) => "\t" ++ column.name ++ " " ++ schemaType ++ primaryKey ++ optionnal ++ d
-    | None => "\t" ++ column.name ++ " " ++ schemaType ++ primaryKey ++ optionnal
+    | Some(d) => "\t\"" ++ column.name ++ "\" " ++ schemaType ++ primaryKey ++ optionnal ++ d
+    | None => "\t\"" ++ column.name ++ "\" " ++ schemaType ++ primaryKey ++ optionnal
     }
   })
   ->Array.join(",\n")
 
-let createTable = (~tableName: string, ~schema: array<columnSchema>): (string, string, string) => {
+@module("fs")
+external writeFileSync: (string, string) => unit = "writeFileSync"
+
+let saveSchemaToFile = (~fileName: string, ~toWrite: (string, string, string)): bool => {
+  let (roles, userSchema, columnsToSql) = toWrite
+  writeFileSync(fileName, roles ++ "\n" ++ userSchema ++ "\n" ++ columnsToSql ++ "\n")
+  true
+}
+
+let createTable = (~tableName: string, ~schema: array<columnSchema>): bool => {
   let uniqueIndexes = _uniqueIndexToSql(schema, tableName)
   let columnsToSql = _columnsToSql(~schema)
   let roles =
@@ -90,7 +99,9 @@ let createTable = (~tableName: string, ~schema: array<columnSchema>): (string, s
     ->Array.filter(x => x->Belt.Option.isSome)
     ->Array.map(x => x->Belt.Option.getExn)
     ->Array.join("\n")
-  (roles, "CREATE TABLE " ++ tableName ++ " (\n" ++ columnsToSql ++ "\n);", uniqueIndexes)
+  let userSchema = "\n" ++ "CREATE TABLE " ++ tableName ++ " (\n" ++ columnsToSql ++ "\n);\n"
+  Console.log(roles ++ userSchema ++ uniqueIndexes)
+  saveSchemaToFile(~fileName="migration.sql", ~toWrite=(roles, userSchema, uniqueIndexes))
 }
 /*
 Result with the input in Example.res:
