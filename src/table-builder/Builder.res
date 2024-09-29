@@ -1,5 +1,17 @@
 open Schema
 
+let _foreignKeyToSql = (
+  ~columnName: string,
+  ~referencedTable: string,
+  ~referencedColumn: string,
+): string =>
+  "\n\tFOREIGN KEY (" ++
+  columnName ++
+  ") REFERENCES " ++
+  referencedTable ++
+  "(" ++
+  referencedColumn ++ ")"
+
 let _uniqueIndexToSql = (schema: array<columnSchema>, tableName: string): string => {
   schema
   ->Array.filter(column => column.unique == true)
@@ -63,7 +75,10 @@ let _createEnum = (name: string, sqlType: sqlType): option<string> => {
   }
 }
 
-let _columnsToSql = (~schema: array<columnSchema>): string =>
+let _columnsToSql = (
+  ~schema: array<columnSchema>,
+  ~foreignKeys: option<array<foreignKey>>,
+): string =>
   schema
   ->Array.map(column => {
     let schemaType = _typeToSql(column.name, column._type)
@@ -75,20 +90,32 @@ let _columnsToSql = (~schema: array<columnSchema>): string =>
     | None => "\t\"" ++ column.name ++ "\" " ++ schemaType ++ primaryKey ++ optionnal
     }
   })
-  ->Array.join(",\n")
+  ->Array.join(",\n") ++
+    switch foreignKeys {
+    | Some(keys) =>
+      keys
+      ->Array.map(({columnName, referencedTable, referencedColumn}) =>
+        _foreignKeyToSql(~columnName, ~referencedTable, ~referencedColumn)
+      )
+      ->Array.join(",\n")
+    | None => ""
+    }
 
 @module("fs")
 external writeFileSync: (string, string) => unit = "writeFileSync"
 
-let saveSchemaToFile = (~fileName: string, ~toWrite: (string, string, string)): bool => {
-  let (roles, userSchema, columnsToSql) = toWrite
-  writeFileSync(fileName, roles ++ "\n" ++ userSchema ++ "\n" ++ columnsToSql ++ "\n")
+let saveSchemaToFile = (~fileName: string, ~toWrite: string): bool => {
+  writeFileSync(fileName, toWrite)
   true
 }
 
-let createTable = (~tableName: string, ~schema: array<columnSchema>): bool => {
+let createTable = (
+  ~tableName: string,
+  ~schema: array<columnSchema>,
+  ~foreignKey: option<array<foreignKey>>,
+): string => {
   let uniqueIndexes = _uniqueIndexToSql(schema, tableName)
-  let columnsToSql = _columnsToSql(~schema)
+  let columnsToSql = _columnsToSql(~schema, ~foreignKeys=foreignKey)
   let roles =
     Array.map(schema, column => {
       switch column._type {
@@ -100,8 +127,7 @@ let createTable = (~tableName: string, ~schema: array<columnSchema>): bool => {
     ->Array.map(x => x->Belt.Option.getExn)
     ->Array.join("\n")
   let userSchema = "\n" ++ "CREATE TABLE " ++ tableName ++ " (\n" ++ columnsToSql ++ "\n);\n"
-  Console.log(roles ++ userSchema ++ uniqueIndexes)
-  saveSchemaToFile(~fileName="migration.sql", ~toWrite=(roles, userSchema, uniqueIndexes))
+  roles ++ "\n" ++ userSchema ++ "\n" ++ uniqueIndexes
 }
 /*
 Result with the input in Example.res:
@@ -117,3 +143,18 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX User_name_key ON "User"("name");
 CREATE UNIQUE INDEX User_email_key ON "User"("email");
 */
+
+let dropTable = (~tableName: string): bool => true
+let updateTable = (~tableName: string, ~updates: columnSchema, ~conditions: columnSchema): bool =>
+  true
+
+let tableOperations: tableOperations = {
+  create: (~tableSchema) =>
+    createTable(
+      ~tableName=tableSchema.tableName,
+      ~schema=tableSchema.schema,
+      ~foreignKey=tableSchema.foreignKeys,
+    ),
+  drop: (~tableName) => dropTable(~tableName),
+  update: (~tableName, ~updates, ~conditions) => updateTable(~tableName, ~updates, ~conditions),
+}

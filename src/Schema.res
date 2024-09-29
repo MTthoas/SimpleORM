@@ -3,6 +3,12 @@ type sqlType =
   | String
   | Enum(array<string>)
 
+type foreignKey = {
+  columnName: string,
+  referencedTable: string,
+  referencedColumn: string,
+}
+
 type columnSchema = {
   name: string,
   _type: sqlType,
@@ -15,16 +21,13 @@ type columnSchema = {
 type tableSchema = {
   tableName: string,
   schema: array<columnSchema>,
+  foreignKeys: option<array<foreignKey>>,
 }
 
 type tableOperations = {
-  create: (~tableName: string, ~schema: array<columnSchema>) => bool,
-  drop: (~tableName: string) => Promise.t<unit>,
-  update: (
-    ~tableName: string,
-    ~updates: columnSchema,
-    ~conditions: columnSchema,
-  ) => Promise.t<unit>,
+  create: (~tableSchema: tableSchema) => string,
+  drop: (~tableName: string) => bool,
+  update: (~tableName: string, ~updates: columnSchema, ~conditions: columnSchema) => bool,
 }
 
 type queryOperations = {

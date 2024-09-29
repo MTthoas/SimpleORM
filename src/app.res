@@ -1,10 +1,11 @@
 open Db
 open Find
 open Builder
+open Schema
 
-let success = createTable(
-  ~tableName="User",
-  ~schema=[
+let userSchema: tableSchema = {
+  tableName: "User",
+  schema: [
     {
       name: "id",
       _type: Int,
@@ -46,7 +47,59 @@ let success = createTable(
       unique: false,
     },
   ],
-)
+  foreignKeys: None,
+}
+
+let postSchema: tableSchema = {
+  tableName: "Posts",
+  schema: [
+    {
+      name: "id",
+      _type: Int,
+      primaryKey: true,
+      optionnal: false,
+      default: None,
+      unique: false,
+    },
+    {
+      name: "user_id",
+      _type: Int,
+      primaryKey: false,
+      optionnal: false,
+      default: None,
+      unique: false, // user_id will not be unique since multiple posts can belong to one user
+    },
+    {
+      name: "title",
+      _type: String,
+      primaryKey: false,
+      optionnal: false,
+      default: None,
+      unique: false,
+    },
+    {
+      name: "content",
+      _type: String,
+      primaryKey: false,
+      optionnal: true,
+      default: None,
+      unique: false,
+    },
+  ],
+  foreignKeys: Some([
+    {
+      columnName: "user_id",
+      referencedTable: "User",
+      referencedColumn: "id",
+    },
+  ]),
+}
+
+let userSQL = tableOperations.create(~tableSchema=userSchema)
+let userPostSQL = tableOperations.create(~tableSchema=postSchema)
+Console.log(userSQL ++ userPostSQL)
+
+saveSchemaToFile(~fileName="migration.sql", ~toWrite=userSQL ++ userPostSQL)->ignore
 
 let testFind = async () => {
   try {
