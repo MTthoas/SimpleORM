@@ -97,8 +97,6 @@ let postSchema: tableSchema = {
 
 let userSQL = tableOperations.create(~tableSchema=userSchema)
 let userPostSQL = tableOperations.create(~tableSchema=postSchema)
-Console.log(userSQL ++ userPostSQL)
-
 saveSchemaToFile(~fileName="migration.sql", ~toWrite=userSQL ++ userPostSQL)->ignore
 
 let testFind = async () => {
