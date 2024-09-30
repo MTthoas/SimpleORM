@@ -4,7 +4,7 @@ open Builder
 open Schema
 
 let userSchema: tableSchema = {
-  tableName: "User",
+  tableName: "Users",
   schema: [
     {
       name: "id",
@@ -89,7 +89,7 @@ let postSchema: tableSchema = {
   foreignKeys: Some([
     {
       columnName: "user_id",
-      referencedTable: "User",
+      referencedTable: "Users",
       referencedColumn: "id",
     },
   ]),

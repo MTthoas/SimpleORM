@@ -5,12 +5,12 @@ let _foreignKeyToSql = (
   ~referencedTable: string,
   ~referencedColumn: string,
 ): string =>
-  "\n\tFOREIGN KEY (" ++
+  ",\n\tFOREIGN KEY (\"" ++
   columnName ++
-  ") REFERENCES " ++
+  "\") REFERENCES \"" ++
   referencedTable ++
-  "(" ++
-  referencedColumn ++ ")"
+  "\"(\"" ++
+  referencedColumn ++ "\")"
 
 let _uniqueIndexToSql = (schema: array<columnSchema>, tableName: string): string => {
   schema
@@ -126,23 +126,9 @@ let createTable = (
     ->Array.filter(x => x->Belt.Option.isSome)
     ->Array.map(x => x->Belt.Option.getExn)
     ->Array.join("\n")
-  let userSchema = "\n" ++ "CREATE TABLE " ++ tableName ++ " (\n" ++ columnsToSql ++ "\n);\n"
+  let userSchema = "\n" ++ "CREATE TABLE \"" ++ tableName ++ "\" (\n" ++ columnsToSql ++ "\n);\n"
   roles ++ "\n" ++ userSchema ++ "\n" ++ uniqueIndexes
 }
-/*
-Result with the input in Example.res:
-CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
-CREATE TYPE "Status" AS ENUM ('BANNED', 'STANDARD', 'PREMIUM');
-CREATE TABLE users (
-        id INTEGER PRIMARY KEY NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        role "Role" NOT NULL DEFAULT 'USER',
-        status "Status" NULL
-);
-CREATE UNIQUE INDEX User_name_key ON "User"("name");
-CREATE UNIQUE INDEX User_email_key ON "User"("email");
-*/
 
 let dropTable = (~tableName: string): bool => true
 let updateTable = (~tableName: string, ~updates: columnSchema, ~conditions: columnSchema): bool =>
