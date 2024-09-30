@@ -106,6 +106,7 @@ external writeFileSync: (string, string) => unit = "writeFileSync"
 
 let saveSchemaToFile = (~fileName: string, ~toWrite: string): bool => {
   writeFileSync(fileName, toWrite)
+  Console.log("Saving schema to file " ++ fileName)
   true
 }
 

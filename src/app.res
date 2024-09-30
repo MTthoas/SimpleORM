@@ -145,6 +145,6 @@ let testFindAll = async () => {
   }
 }
 
-// Exécuter la fonction de test
-testFind()->ignore
-testFindAll()->ignore
+// // Exécuter la fonction de test
+// testFind()->ignore
+// testFindAll()->ignore
