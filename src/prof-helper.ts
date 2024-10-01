@@ -24,7 +24,7 @@ type TableOperations<T> = {
   update: (
     tableName: keyof T,
     updates: Partial<T[keyof T]>,
-    conditions: Partial<T[keyof T]>
+    conditions: Partial<T[keyof T]>,
   ) => Promise<void>;
 };
 
@@ -32,12 +32,12 @@ type QueryOperations<T> = {
   select: <K extends keyof T[keyof T]>(
     tableName: keyof T,
     columns: K[],
-    conditions?: Partial<T[keyof T]>
+    conditions?: Partial<T[keyof T]>,
   ) => Promise<Pick<T[keyof T], K>[]>;
   insert: (tableName: keyof T, data: T[keyof T]) => Promise<void>;
   delete: (
     tableName: keyof T,
-    conditions: Partial<T[keyof T]>
+    conditions: Partial<T[keyof T]>,
   ) => Promise<void>;
 };
 
@@ -48,14 +48,14 @@ type Orm<T> = {
 
 const createTable = async (
   tableName: string,
-  schema: Record<string, string>
+  schema: Record<string, string>,
 ) => {
   // TODO: implémenter la création de table
 };
 
 export const useOrmSql = <T>(
   config: ConfigSql,
-  configTable: TableSchema[]
+  configTable: TableSchema[],
 ): Orm<T> => {
   // TODO: connect to sql database using config
 
@@ -63,10 +63,13 @@ export const useOrmSql = <T>(
   configTable.forEach(async ({ tableName, schema }) => {
     await createTable(
       tableName,
-      schema.reduce((acc, col) => {
-        acc[col.name] = col.type;
-        return acc;
-      }, {} as Record<string, string>)
+      schema.reduce(
+        (acc, col) => {
+          acc[col.name] = col.type;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
     );
   });
 
