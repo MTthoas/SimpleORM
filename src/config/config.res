@@ -16,7 +16,7 @@ module Config = {
   }
 
   // Load environment variables from .env file
-  config({"path": ".env.development"})
+  config()
 
   let getEnvVar = (key: string, defaultValue: string) => {
     switch Js.Dict.get(NodeProcess.env, key) {

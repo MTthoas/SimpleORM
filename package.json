@@ -9,7 +9,7 @@
     "start": "bun src/app.res.js",
     "test": "bun test tests/*.test.*",
     "dev:app": "bun run --watch functions/App.res.js",
-    "dev": "bun run res:build && bun run format && concurrently 'bun:dev:*'",
+    "dev": "bun run res:build && concurrently 'bun:dev:*'",
     "apply": "bun run ./src/core/ApplyMigration.res.js"
   },
   "keywords": [
