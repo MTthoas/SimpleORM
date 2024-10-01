@@ -55,7 +55,7 @@ module QueryBuilder = {
   }
 
   /* Check if a column exists in the specified table */
-  let isColumnExists = (~tableName: string, ~columnName: string, client: PgClient.t): Promise.t<
+  let _isColumnExists = (~tableName: string, ~columnName: string, client: PgClient.t): Promise.t<
     bool,
   > => {
     let statement = "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2) AS column_exists"
@@ -87,14 +87,29 @@ module QueryBuilder = {
     })
   }
 
-  /* Build the WHERE clause if conditions are present */
-  let _buildWhereClause = (~where: option<array<(string, Query.Params.t)>>) => {
+  /* Validate that all fields exist in the table */
+  let _validateFields = (~tableName: string, ~fields: array<string>, client: PgClient.t) => {
+    Promise.all(
+      fields->Belt.Array.map(field =>
+        _isColumnExists(~tableName, ~columnName=field, client)->Promise.then(columnExists =>
+          if columnExists {
+            Promise.resolve(true)
+          } else {
+            Promise.reject(Failure("Column " ++ field ++ " does not exist in table " ++ tableName))
+          }
+        )
+      ),
+    )
+  }
+
+  /* Build the WHERE clause with a starting index for placeholders */
+  let _buildWhereClause = (~where: option<array<(string, Query.Params.t)>>, ~startIndex: int) => {
     switch where {
     | Some(conditions) =>
       if conditions->Array.length > 0 {
         let clauses =
           conditions->Belt.Array.mapWithIndex((index, (field, _)) =>
-            field ++ " = $" ++ Js.Int.toString(index + 1)
+            field ++ " = $" ++ Js.Int.toString(index + startIndex)
           )
         let whereClause = " WHERE " ++ clauses->Array.join(" AND ")
         let params = conditions->Array.map(((_, value)) => value)
@@ -105,6 +120,7 @@ module QueryBuilder = {
     | None => ("", [])
     }
   }
+
 
   /* Build the LIMIT clause if a limit is present */
   let _buildLimitClause = (~limit: option<int>) => {
@@ -123,7 +139,7 @@ module QueryBuilder = {
     _checkIfTableExists(~tableName, client)
     ->Promise.then(_ => {
       let baseQuery = "SELECT * FROM " ++ tableName
-      let (whereClause, _) = _buildWhereClause(~where)
+      let (whereClause, _) = _buildWhereClause(~where, ~startIndex=1)
       let limitClause = _buildLimitClause(~limit)
 
       let finalQuery = baseQuery ++ whereClause ++ limitClause
@@ -161,21 +177,7 @@ module QueryBuilder = {
     // Check if the table exists before building the query
     _checkIfTableExists(~tableName, client)
     ->Promise.then(_ => {
-      // Validate that all fields exist in the table
-      Promise.all(
-        fields->Belt.Array.map(field =>
-          isColumnExists(~tableName, ~columnName=field, client)->Promise.then(
-            columnExists =>
-              if columnExists {
-                Promise.resolve(true)
-              } else {
-                Promise.reject(
-                  Failure("Column " ++ field ++ " does not exist in table " ++ tableName),
-                )
-              },
-          )
-        ),
-      )
+      _validateFields(~tableName, ~fields, client)
     })
     ->Promise.then(_ => {
       // Validate that fields and values match
@@ -204,24 +206,57 @@ module QueryBuilder = {
   }
 
   /* Build an UPDATE query with a WHERE clause and validation */
-  let _buildUpdateQuery = (
-    ~tableName: string,
-    ~fields: array<string>,
-    ~where: option<array<(string, Query.Params.t)>>,
-    client: PgClient.t,
-  ) => {
-    // Check if the table exists before building the query
-    _checkIfTableExists(~tableName, client)->Promise.then(_ => {
+let _buildUpdateQuery = (
+  ~tableName: string,
+  ~fields: array<string>,
+  ~values: array<Query.Params.t>,
+  ~where: option<array<(string, Query.Params.t)>>,
+  client: PgClient.t,
+): Promise.t<(string, array<Query.Params.t>)> => {
+  // Check if the table exists before building the query
+  _checkIfTableExists(~tableName, client)
+  ->Promise.then(_ => {
+    // Validate the fields exist in the table
+    _validateFields(~tableName, ~fields, client)
+  })
+  ->Promise.then(_ => {
+    // Validate that fields and values match
+    if fields->Array.length === 0 || values->Array.length === 0 {
+      Promise.reject(Failure("Fields or values cannot be empty"))
+    } else if fields->Array.length !== values->Array.length {
+      Promise.reject(Failure("The number of fields and values do not match"))
+    } else {
+      // Build the base update query
       let baseQuery = "UPDATE " ++ tableName ++ " SET "
+
+      // Construct the SET clause
       let setClause =
-        fields->Belt.Array.mapWithIndex((index, field) =>
+        fields
+        ->Belt.Array.mapWithIndex((index, field) =>
           field ++ " = $" ++ Js.Int.toString(index + 1)
         )
-      let whereClause = fst(_buildWhereClause(~where))
-      let query = baseQuery ++ setClause->Array.join(", ") ++ whereClause ++ " RETURNING *"
-      Promise.resolve(query)
-    })
-  }
+        ->Array.join(", ")
+
+      // Construct the WHERE clause
+      let (whereClause, whereParams) = _buildWhereClause(~where, ~startIndex=fields->Array.length + 1)
+      Js.log("WHERE CLAUSE: " ++ whereClause)
+
+      // Combine the SET and WHERE clauses
+      let query = baseQuery ++ setClause ++ whereClause ++ " RETURNING *"
+
+      Promise.resolve((query, values->Array.concat(whereParams)))
+    }
+  })
+  ->Promise.catch(err => {
+    let errMessage = switch err {
+    | Failure(message) => message
+    | _ => "Unknown error during update query construction"
+    }
+    Js.log("Error: " ++ errMessage)
+    Promise.reject(Failure(errMessage))
+  })
+}
+
 
   /* Build a DELETE query with validation */
   let _buildDeleteQuery = (
@@ -231,10 +266,10 @@ module QueryBuilder = {
   ) => {
     // Check if the table exists before building the query
     _checkIfTableExists(~tableName, client)->Promise.then(_ => {
+      let (whereClause, params) = _buildWhereClause(~where, ~startIndex=1)
       let baseQuery = "DELETE FROM " ++ tableName
-      let whereClause = fst(_buildWhereClause(~where))
       let query = baseQuery ++ whereClause ++ " RETURNING *"
-      Promise.resolve(query)
+      Promise.resolve((query, params))
     })
   }
 
@@ -249,9 +284,7 @@ module QueryBuilder = {
     PgClient.Params.query(client, ~statement, ~params)
     ->Promise.then(result => {
       if result.rows->Belt.Array.length === 0 {
-        let errMsg = "No results found for query: " ++ statement
-        Js.log(errMsg)
-        Promise.reject(Failure(errMsg))
+        Promise.resolve(result)
       } else {
         Promise.resolve(result)
       }

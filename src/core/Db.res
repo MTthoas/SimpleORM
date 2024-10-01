@@ -22,3 +22,15 @@ let connectToDb = () => {
     Js.Promise.reject(e)
   })
 }
+
+let closeConnection = (client: PgClient.t) => {
+  PgClient.end(client, ())
+  ->Promise.then(_ => {
+    Console.log("Connection closed")
+    Js.Promise.resolve()
+  })
+  ->Promise.catch(e => {
+    Console.error2("Failed to close the connection", e)
+    Js.Promise.reject(e)
+  })
+}
