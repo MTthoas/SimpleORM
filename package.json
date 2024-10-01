@@ -2,14 +2,16 @@
   "name": "simple-orm",
   "version": "1.0.0",
   "scripts": {
-    "build:tests": "rescript build",
-    "test": "npm run build:tests && jest",
-    "build:rescript": "rescript build",
-    "build": "bun run build:rescript",
-    "dev:rescript": "rescript build -w",
-    "dev:app": "bun run --watch functions/App.res.js",
+    "res:build": "rescript",
+    "res:clean": "rescript clean",
+    "res:dev": "rescript -w",
+    "dev:bun": "bun --watch run src/app.res.js",
+    "start": "bun src/app.res.js",
+    "test": "bun test tests/*.test.*",
+    "dev:test": "bun run test --watch",
     "dev": "bun run build:rescript && bun run format && concurrently 'bun:dev:*'",
-    "format": "rescript format -all"
+    "dev:app": "bun run --watch src/app.res.js",
+    "apply": "bun run ./src/core/ApplyMigration.res.js"
   },
   "keywords": [
     "rescript",
