@@ -1,5 +1,5 @@
 {
-  "name": "simple-orm",
+  "name": "simple-js-orm",
   "version": "1.0.0",
   "scripts": {
     "format": "prettier --write .",
