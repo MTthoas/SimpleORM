@@ -2,9 +2,15 @@
 
 SimpleORM - A Lightweight JavaScript ORM for REST APIs build in Rescript.
 
+![ReScript](https://img.shields.io/badge/rescript-%2314162c?style=for-the-badge&logo=rescript&logoColor=e34c4c)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)
+
 ### Description
 
 A lightweight, customizable Object-Relational Mapping (ORM) tool built in Rescript for working with RESTful APIs.
+
+For now : Only on PostgresSQL !
 
 # File Structure
 
