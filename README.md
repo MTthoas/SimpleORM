@@ -6,7 +6,7 @@ SimpleORM - A Lightweight JavaScript ORM for REST APIs build in Rescript.
 
 A lightweight, customizable Object-Relational Mapping (ORM) tool built in Rescript for working with RESTful APIs.
 
-## Development
+# Development
 
 To get started with development, clone the repository and run the following commands:
 
@@ -37,9 +37,9 @@ bun apply
 
 This will create the tables in the database.
 
-## Usage
+# Usage
 
-# Schema Builder
+## Schema Builder
 
 Using the `schema` function, you can define the following properties:
 
@@ -101,7 +101,7 @@ let userPostSQL = tableOperations.create(~tableSchema=postSchema)
 saveSchemaToFile(~fileName="migration.sql", ~toWrite=userSQL ++ userPostSQL)->ignore
 ```
 
-# Repository Module
+## Repository Module
 
 The `Repository` module is a core component of **SimpleORM**, designed to provide simple database interaction functionality for PostgreSQL. It leverages the `QueryBuilder` module to generate and execute SQL queries, making it easy to perform CRUD operations (Create, Read, Update, Delete) on database tables. The `Repository` exposes several functions that abstract the complexity of raw SQL operations and provide a convenient API for developers.
 
@@ -337,7 +337,8 @@ This allows for robust error handling in your application logic.
 
 This documentation gives an overview of the `Repository` module and shows how the `QueryBuilder` is used internally to manage the query construction process. You can extend or customize these functions to fit your specific use cases.
 
-# DB Module
+
+## DB Module
 
 The **DB** module is responsible for managing the connection to a PostgreSQL database and handling database operations like applying migrations and closing the connection. It exposes a few key functions to help establish and manage database connections, execute SQL queries, and perform cleanup operations when needed.
 
@@ -366,7 +367,6 @@ The **DB** module is responsible for managing the connection to a PostgreSQL dat
    ```
 
    - **Parameters:**
-
      - `user`: The database user (defaulted from `Config`).
      - `password`: The password for the database user (defaulted from `Config`).
      - `host`: The host where the PostgreSQL server is running (defaulted from `Config`).
@@ -390,7 +390,6 @@ The **DB** module is responsible for managing the connection to a PostgreSQL dat
    ```
 
    - **Parameters:**
-
      - `client`: The active `PgClient.t` client instance to be closed.
 
    - **Returns**: A `Promise` that resolves when the connection is successfully closed.
@@ -410,7 +409,6 @@ The **DB** module is responsible for managing the connection to a PostgreSQL dat
    ```
 
    - **Parameters:**
-
      - `onSuccess`: A callback function that is called when the migration is successful.
      - `onError`: A callback function that is called when an error occurs during the migration.
      - `client`: The active `PgClient.t` client instance to run the migration.
@@ -455,19 +453,18 @@ handleMigrations()
 ```
 
 ### How It Works:
-
 1. **`connectToDb`**: Establishes a connection to the database using the default or provided configuration.
 2. **`applyMigration`**: Executes the migration SQL script on the database to update or create schema changes.
 3. **`closeConnection`**: Closes the database connection to release resources after the migration is complete.
 
 ### Error Handling:
-
 The module logs errors to the console and supports custom error-handling logic via callbacks in the `applyMigration` function. It ensures that any issues with connecting to the database, executing queries, or closing connections are handled gracefully.
+
+
 
 ## Local development :
 
 - **Environment Variables**: The configuration values for `user`, `password`, `host`, `database`, and `port` are read from environment variables:
-
   - `DB_USER` for the database username.
   - `DB_PASSWORD` for the password.
   - `DB_HOST` for the database host.
@@ -491,3 +488,5 @@ DB_HOST=localhost
 DB_NAME=db
 DB_PORT=5432
 ```
+
+
