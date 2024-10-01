@@ -6,6 +6,94 @@ SimpleORM - A Lightweight JavaScript ORM for REST APIs build in Rescript.
 
 A lightweight, customizable Object-Relational Mapping (ORM) tool built in Rescript for working with RESTful APIs.
 
+# File Structure
+
+Here is the file structure of the project:
+
+```
+simpleorm/
+├── functions/
+│   └── user/
+│       ├── User.res
+│       ├── User.res.js
+│       └── App.res
+├── lib/
+├── node_modules/
+├── src/
+│   ├── bindings/
+│   │   ├── PgBind.res
+│   │   └── PgBind.res.js
+│   ├── config/
+│   │   ├── config.res
+│   │   └── config.res.js
+│   ├── core/
+│   │   ├── ApplyMigration.res
+│   │   ├── ApplyMigration.res.js
+│   │   ├── Db.res
+│   │   └── Db.res.js
+│   ├── queries/
+│   │   ├── QueryBuilder.res
+│   │   ├── QueryBuilder.res.js
+│   │   ├── Repository.res
+│   │   └── Repository.res.js
+│   └── table-builder/
+│       ├── Builder.res
+│       ├── Builder.res.js
+│       └── Schema.res
+│       └── Schema.res.js
+├── tests/
+│   ├── DbTest.test.res
+│   ├── DbTest.test.res.js
+│   └── Find.test.res
+│   └── Find.test.res.js
+├── .env.development
+├── docker-compose.yaml
+├── migration.sql
+├── rescript.json
+└── README.md
+```
+
+---
+
+## Description of Key Folders:
+
+### `functions/`
+
+This folder contains example functions that demonstrate how to use the SimpleORM library in a real-world scenario. Specifically, the `user/` directory contains:
+
+- **`User.res`**: Implements user-specific operations such as inserting or querying user records in the database using SimpleORM.
+- **`App.res`**: The main entry point for the example application, showcasing how the ORM can be used to manage users.
+
+The `functions` directory is intended for showcasing example usage of the ORM in application logic.
+
+### `src/`
+
+The main source folder of the SimpleORM project, organized into subdirectories for specific functionalities:
+
+- **`bindings/`**: Contains Rescript bindings for PostgreSQL. For example, `PgBind.res` defines how Rescript interacts with the PostgreSQL client.
+
+- **`config/`**: Includes configuration files like `config.res`, which manages loading environment variables and default settings for database connections.
+
+- **`core/`**: Core functionalities of the ORM are implemented here. For example:
+  - `Db.res`: Manages the database connection and closure.
+  - `ApplyMigration.res`: Applies migration scripts to modify the database schema.
+
+- **`queries/`**: Contains query-building logic:
+  - `QueryBuilder.res`: Constructs SQL queries dynamically for operations like `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+  - `Repository.res`: Provides an abstraction layer that simplifies database interactions using CRUD operations.
+
+- **`table-builder/`**: Utilities for constructing database tables, including schema and migration scripts:
+  - `Builder.res`: Handles building table creation queries.
+  - `Schema.res`: Manages table schema definitions.
+
+### `tests/`
+
+Contains the test files for verifying the behavior of various components, such as database interactions and query builders:
+
+- **`DbTest.test.res`**: Tests related to database connection and operations.
+- **`Find.test.res`**: Tests for querying and finding records in the database.
+
+
 # Development
 
 To get started with development, clone the repository and run the following commands:
