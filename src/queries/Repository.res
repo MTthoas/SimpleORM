@@ -137,15 +137,4 @@ module Repository = {
     let where = [("id", Query.Params.int(id))]
     delete(~tableName, ~where, client)
   }
-
-  /* Update a PostgreSQL table */
-  let save = async (
-    ~tableName: string,
-    ~fields: array<string>,
-    ~values: array<Query.Params.t>,
-    client: PgClient.t,
-  ) => {
-    let statement = await QueryBuilder._buildInsertQuery(~tableName, ~fields, ~values, client)
-    await QueryBuilder._executeQuery(~statement, ~params=values, client)
-  }
 }

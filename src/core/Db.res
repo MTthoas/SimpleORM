@@ -4,13 +4,19 @@ open Config
 @module("fs")
 external readFileSync: string => string = "readFileSync"
 
-let connectToDb = () => {
+let connectToDb = (
+  ~user=Config.defaultConfig.user,
+  ~password=Config.defaultConfig.password,
+  ~host=Config.defaultConfig.host,
+  ~database=Config.defaultConfig.database,
+  ~port=Config.defaultConfig.port,
+) => {
   let client = PgClient.make(
-    ~user=Config.defaultConfig.user,
-    ~password=Config.defaultConfig.password,
-    ~host=Config.defaultConfig.host,
-    ~database=Config.defaultConfig.database,
-    ~port=Config.defaultConfig.port,
+    ~user=user,
+    ~password=password,
+    ~host=host,
+    ~database=database,
+    ~port=port,
     (),
   )
 
