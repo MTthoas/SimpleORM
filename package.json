@@ -1,7 +1,6 @@
 {
   "name": "simple-orm",
-  "version": "0.0.0",
-  "main": "src/app.js",
+  "version": "1.0.0",
   "scripts": {
     "res:build": "rescript",
     "res:clean": "rescript clean",
@@ -10,7 +9,7 @@
     "start": "bun src/app.res.js",
     "test": "bun test tests/*.test.*",
     "dev:test": "bun run test --watch",
-    "dev": "bun run build:rescript && concurrently 'bun:dev:*'",
+    "dev": "bun run build:rescript && bun run format && concurrently 'bun:dev:*'",
     "dev:app": "bun run --watch src/app.res.js",
     "apply": "bun run ./src/core/ApplyMigration.res.js"
   },
@@ -32,6 +31,7 @@
     "uuid": "^10.0.0"
   },
   "devDependencies": {
+    "@glennsl/rescript-jest": "^0.11.0",
     "nodemon": "^3.1.4"
   }
 }

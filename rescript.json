@@ -6,7 +6,11 @@
       "subdirs": true
     },
     {
-      "dir": "test"
+      "dir": "tests"
+    },
+    {
+      "dir": "functions",
+      "subdirs": true
     }
   ],
   "package-specs": {
@@ -17,7 +21,8 @@
   "suffix": ".res.js",
   "bs-dependencies": [
     "@rescript/core",
-    "rescript-bun"
+    "rescript-bun",
+    "@glennsl/rescript-jest"
   ],
   "bsc-flags": [
     "-open RescriptCore",
