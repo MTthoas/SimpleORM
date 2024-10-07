@@ -2,9 +2,7 @@
 
 SimpleORM - A Lightweight JavaScript ORM for REST APIs build in Rescript.
 
-![ReScript](https://img.shields.io/badge/rescript-%2314162c?style=for-the-badge&logo=rescript&logoColor=e34c4c)
-![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
-![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)
+![ReScript](https://img.shields.io/badge/rescript-%2314162c?style=for-the-badge&logo=rescript&logoColor=e34c4c) ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) ![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)
 
 ### Description
 
@@ -109,16 +107,14 @@ To get started with development, clone the repository and run the following comm
 bun install
 ```
 
-The example is directly in the `src/app.res` folder.
-To build & run the project, run:
+The example is directly in the `src/app.res` folder. To build & run the project, run:
 
 ```bash
 bun res:build
 bun start
 ```
 
-This will create the migration.sql based on the schema defined in the `src/app.res` file.
-Once the migration.sql file is created run a local postgres database using docker-compose:
+This will create the migration.sql based on the schema defined in the `src/app.res` file. Once the migration.sql file is created run a local postgres database using docker-compose:
 
 ```bash
 docker compose up --build
