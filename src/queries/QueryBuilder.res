@@ -121,7 +121,6 @@ module QueryBuilder = {
     }
   }
 
-
   /* Build the LIMIT clause if a limit is present */
   let _buildLimitClause = (~limit: option<int>) => {
     switch limit {
@@ -206,57 +205,57 @@ module QueryBuilder = {
   }
 
   /* Build an UPDATE query with a WHERE clause and validation */
-let _buildUpdateQuery = (
-  ~tableName: string,
-  ~fields: array<string>,
-  ~values: array<Query.Params.t>,
-  ~where: option<array<(string, Query.Params.t)>>,
-  client: PgClient.t,
-): Promise.t<(string, array<Query.Params.t>)> => {
-  // Check if the table exists before building the query
-  _checkIfTableExists(~tableName, client)
-  ->Promise.then(_ => {
-    // Validate the fields exist in the table
-    _validateFields(~tableName, ~fields, client)
-  })
-  ->Promise.then(_ => {
-    // Validate that fields and values match
-    if fields->Array.length === 0 || values->Array.length === 0 {
-      Promise.reject(Failure("Fields or values cannot be empty"))
-    } else if fields->Array.length !== values->Array.length {
-      Promise.reject(Failure("The number of fields and values do not match"))
-    } else {
-      // Build the base update query
-      let baseQuery = "UPDATE " ++ tableName ++ " SET "
+  let _buildUpdateQuery = (
+    ~tableName: string,
+    ~fields: array<string>,
+    ~values: array<Query.Params.t>,
+    ~where: option<array<(string, Query.Params.t)>>,
+    client: PgClient.t,
+  ): Promise.t<(string, array<Query.Params.t>)> => {
+    // Check if the table exists before building the query
+    _checkIfTableExists(~tableName, client)
+    ->Promise.then(_ => {
+      // Validate the fields exist in the table
+      _validateFields(~tableName, ~fields, client)
+    })
+    ->Promise.then(_ => {
+      // Validate that fields and values match
+      if fields->Array.length === 0 || values->Array.length === 0 {
+        Promise.reject(Failure("Fields or values cannot be empty"))
+      } else if fields->Array.length !== values->Array.length {
+        Promise.reject(Failure("The number of fields and values do not match"))
+      } else {
+        // Build the base update query
+        let baseQuery = "UPDATE " ++ tableName ++ " SET "
 
-      // Construct the SET clause
-      let setClause =
-        fields
-        ->Belt.Array.mapWithIndex((index, field) =>
-          field ++ " = $" ++ Js.Int.toString(index + 1)
+        // Construct the SET clause
+        let setClause =
+          fields
+          ->Belt.Array.mapWithIndex((index, field) => field ++ " = $" ++ Js.Int.toString(index + 1))
+          ->Array.join(", ")
+
+        // Construct the WHERE clause
+        let (whereClause, whereParams) = _buildWhereClause(
+          ~where,
+          ~startIndex=fields->Array.length + 1,
         )
-        ->Array.join(", ")
+        Js.log("WHERE CLAUSE: " ++ whereClause)
 
-      // Construct the WHERE clause
-      let (whereClause, whereParams) = _buildWhereClause(~where, ~startIndex=fields->Array.length + 1)
-      Js.log("WHERE CLAUSE: " ++ whereClause)
+        // Combine the SET and WHERE clauses
+        let query = baseQuery ++ setClause ++ whereClause ++ " RETURNING *"
 
-      // Combine the SET and WHERE clauses
-      let query = baseQuery ++ setClause ++ whereClause ++ " RETURNING *"
-
-      Promise.resolve((query, values->Array.concat(whereParams)))
-    }
-  })
-  ->Promise.catch(err => {
-    let errMessage = switch err {
-    | Failure(message) => message
-    | _ => "Unknown error during update query construction"
-    }
-    Js.log("Error: " ++ errMessage)
-    Promise.reject(Failure(errMessage))
-  })
-}
-
+        Promise.resolve((query, values->Array.concat(whereParams)))
+      }
+    })
+    ->Promise.catch(err => {
+      let errMessage = switch err {
+      | Failure(message) => message
+      | _ => "Unknown error during update query construction"
+      }
+      Js.log("Error: " ++ errMessage)
+      Promise.reject(Failure(errMessage))
+    })
+  }
 
   /* Build a DELETE query with validation */
   let _buildDeleteQuery = (

@@ -78,7 +78,6 @@ module User = {
     client: PgClient.t,
   ) => {
     try {
-
       let whereConditions = where->Belt.Option.getWithDefault([])
 
       // Vérifier que la clause WHERE n'est pas vide si elle est attendue
@@ -137,7 +136,7 @@ module User = {
   }
 
   /* Fonction pour supprimer un utilisateur */
-  let deleteUserById = async (~id: int, client: PgClient.t ) => {
+  let deleteUserById = async (~id: int, client: PgClient.t) => {
     try {
       let whereClause = [("id", Query.Params.int(id))]
       let result = await Repository.delete(~tableName="users", ~where=whereClause, client)
