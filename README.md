@@ -10,7 +10,7 @@ SimpleORM - A Lightweight JavaScript ORM for REST APIs build in Rescript.
 
 A lightweight, customizable Object-Relational Mapping (ORM) tool built in Rescript for working with RESTful APIs.
 
- <ins>***NOTES***</ins> : Currently only available for PostgresSQL
+<ins>**_NOTES_**</ins> : Currently only available for PostgresSQL
 
 # File Structure
 
@@ -81,10 +81,12 @@ The main source folder of the SimpleORM project, organized into subdirectories f
 - **`config/`**: Includes configuration files like `config.res`, which manages loading environment variables and default settings for database connections.
 
 - **`core/`**: Core functionalities of the ORM are implemented here. For example:
+
   - `Db.res`: Manages the database connection and closure.
   - `ApplyMigration.res`: Applies migration scripts to modify the database schema.
 
 - **`queries/`**: Contains query-building logic:
+
   - `QueryBuilder.res`: Constructs SQL queries dynamically for operations like `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
   - `Repository.res`: Provides an abstraction layer that simplifies database interactions using CRUD operations.
 
@@ -98,7 +100,6 @@ Contains the test files for verifying the behavior of various components, such a
 
 - **`DbTest.test.res`**: Tests related to database connection and operations.
 - **`Find.test.res`**: Tests for querying and finding records in the database.
-
 
 # Development
 
@@ -431,7 +432,6 @@ This allows for robust error handling in your application logic.
 
 This documentation gives an overview of the `Repository` module and shows how the `QueryBuilder` is used internally to manage the query construction process. You can extend or customize these functions to fit your specific use cases.
 
-
 ## DB Module
 
 The **DB** module is responsible for managing the connection to a PostgreSQL database and handling database operations like applying migrations and closing the connection. It exposes a few key functions to help establish and manage database connections, execute SQL queries, and perform cleanup operations when needed.
@@ -461,6 +461,7 @@ The **DB** module is responsible for managing the connection to a PostgreSQL dat
    ```
 
    - **Parameters:**
+
      - `user`: The database user (defaulted from `Config`).
      - `password`: The password for the database user (defaulted from `Config`).
      - `host`: The host where the PostgreSQL server is running (defaulted from `Config`).
@@ -484,6 +485,7 @@ The **DB** module is responsible for managing the connection to a PostgreSQL dat
    ```
 
    - **Parameters:**
+
      - `client`: The active `PgClient.t` client instance to be closed.
 
    - **Returns**: A `Promise` that resolves when the connection is successfully closed.
@@ -503,6 +505,7 @@ The **DB** module is responsible for managing the connection to a PostgreSQL dat
    ```
 
    - **Parameters:**
+
      - `onSuccess`: A callback function that is called when the migration is successful.
      - `onError`: A callback function that is called when an error occurs during the migration.
      - `client`: The active `PgClient.t` client instance to run the migration.
@@ -547,18 +550,19 @@ handleMigrations()
 ```
 
 ### How It Works:
+
 1. **`connectToDb`**: Establishes a connection to the database using the default or provided configuration.
 2. **`applyMigration`**: Executes the migration SQL script on the database to update or create schema changes.
 3. **`closeConnection`**: Closes the database connection to release resources after the migration is complete.
 
 ### Error Handling:
+
 The module logs errors to the console and supports custom error-handling logic via callbacks in the `applyMigration` function. It ensures that any issues with connecting to the database, executing queries, or closing connections are handled gracefully.
-
-
 
 ## Local development :
 
 - **Environment Variables**: The configuration values for `user`, `password`, `host`, `database`, and `port` are read from environment variables:
+
   - `DB_USER` for the database username.
   - `DB_PASSWORD` for the password.
   - `DB_HOST` for the database host.
@@ -582,5 +586,3 @@ DB_HOST=localhost
 DB_NAME=db
 DB_PORT=5432
 ```
-
-
