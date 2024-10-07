@@ -15,7 +15,7 @@ module Repository = {
     client: PgClient.t,
   ) => {
     try {
-      let (_, params) = QueryBuilder._buildWhereClause(~where)
+      let (_, params) = QueryBuilder._buildWhereClause(~where, ~startIndex=1)
       let statement = await QueryBuilder._buildSelectQuery(~tableName, ~where, ~limit, client)
       let result = await QueryBuilder._executeQuery(~statement, ~params, client)
       Promise.resolve(result.rows)
@@ -66,8 +66,10 @@ module Repository = {
     client: PgClient.t,
   ) => {
     let statement = await QueryBuilder._buildInsertQuery(~tableName, ~fields, ~values, client)
-    let insert = await QueryBuilder._executeQuery(~statement, ~params=values, client)
-    Promise.resolve(insert)
+    let _ = await QueryBuilder._executeQuery(~statement, ~params=values, client)
+    /* Get users then */
+    let users = await find(~tableName, client)
+    Promise.resolve(users)
   }
 
   /* Insert a single record */
@@ -80,14 +82,59 @@ module Repository = {
     insert(~tableName, ~fields, ~values, client)
   }
 
-  /* Update a PostgreSQL table */
-  let save = async (
+  /* Update records */
+  let update = async (
     ~tableName: string,
     ~fields: array<string>,
     ~values: array<Query.Params.t>,
+    ~where: option<array<(string, Query.Params.t)>>=?,
     client: PgClient.t,
   ) => {
-    let statement = await QueryBuilder._buildInsertQuery(~tableName, ~fields, ~values, client)
-    await QueryBuilder._executeQuery(~statement, ~params=values, client)
+    let (statement, params) = await QueryBuilder._buildUpdateQuery(
+      ~tableName,
+      ~fields,
+      ~values,
+      ~where,
+      client,
+    )
+
+    Js.log("Statement: " ++ statement)
+    Js.log(params)
+
+    let _ = await QueryBuilder._executeQuery(~statement, ~params, client)
+    /* Get users then */
+    let users = await find(~tableName, client)
+    Promise.resolve(users)
+  }
+
+  /* Update by ID */
+  let updateById = async (
+    ~tableName: string,
+    ~fields: array<string>,
+    ~values: array<Query.Params.t>,
+    ~id: int,
+    client: PgClient.t,
+  ) => {
+    let where = [("id", Query.Params.int(id))]
+    update(~tableName, ~fields, ~values, ~where, client)
+  }
+
+  /* Delete records */
+  let delete = async (
+    ~tableName: string,
+    ~where: option<array<(string, Query.Params.t)>>=?,
+    client: PgClient.t,
+  ) => {
+    let (statement, params) = await QueryBuilder._buildDeleteQuery(~tableName, ~where, client)
+    let _ = await QueryBuilder._executeQuery(~statement, ~params, client)
+    /* Get users then */
+    let users = await find(~tableName, client)
+    Promise.resolve(users)
+  }
+
+  /* Delete by ID */
+  let deleteById = async (~tableName: string, ~id: int, client: PgClient.t) => {
+    let where = [("id", Query.Params.int(id))]
+    delete(~tableName, ~where, client)
   }
 }

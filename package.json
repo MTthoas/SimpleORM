@@ -1,15 +1,17 @@
 {
-  "name": "simple-orm",
+  "name": "simple-js-orm",
   "version": "1.0.0",
   "scripts": {
-    "build:tests": "rescript build",
-    "test": "npm run build:tests && jest",
-    "build:rescript": "rescript build",
-    "build": "bun run build:rescript",
-    "dev:rescript": "rescript build -w",
-    "dev:app": "bun run --watch examples/NewApp.res.js",
-    "dev": "bun run build:rescript && bun run format && concurrently 'bun:dev:*'",
-    "format": "rescript format -all"
+    "format": "prettier --write .",
+    "res:build": "rescript",
+    "res:clean": "rescript clean",
+    "res:dev": "rescript -w",
+    "start": "bun src/app.res.js",
+    "test": "bun test tests/*.test.*",
+    "pretty": "prettier --write .",
+    "dev:app": "bun run --watch functions/App.res.js",
+    "dev": "bun run res:build && bun run pretty && concurrently 'bun:dev:*'",
+    "apply": "bun run ./src/core/ApplyMigration.res.js"
   },
   "keywords": [
     "rescript",
@@ -21,6 +23,7 @@
     "@graphile/logger": "^0.2.0",
     "@rescript/core": "^1.6.0",
     "concurrently": "^9.0.1",
+    "dotenv": "^16.4.5",
     "pg": "^8.12.0",
     "rescript": "^11.1.4",
     "rescript-bun": "^0.5.0",
@@ -30,6 +33,7 @@
   },
   "devDependencies": {
     "@glennsl/rescript-jest": "^0.11.0",
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "prettier": "3.3.3"
   }
 }
