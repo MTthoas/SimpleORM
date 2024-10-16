@@ -11,14 +11,7 @@ let connectToDb = (
   ~database=Config.defaultConfig.database,
   ~port=Config.defaultConfig.port,
 ) => {
-  let client = PgClient.make(
-    ~user=user,
-    ~password=password,
-    ~host=host,
-    ~database=database,
-    ~port=port,
-    (),
-  )
+  let client = PgClient.make(~user, ~password, ~host, ~database, ~port, ())
 
   PgClient.connect(client, ())
   ->Promise.then(_ => {

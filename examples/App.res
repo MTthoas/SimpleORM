@@ -100,8 +100,6 @@ let userSQL = tableOperations.create(~tableSchema=userSchema)
 let userPostSQL = tableOperations.create(~tableSchema=postSchema)
 saveSchemaToFile(~fileName="migration.sql", ~toWrite=userSQL ++ userPostSQL)->ignore
 
-
-
 let testUser = async () => {
   Js.log("Functionnal test for the User module, calling Repository functions")
   /* Connection to the DB */
