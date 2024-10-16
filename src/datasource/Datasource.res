@@ -1,7 +1,56 @@
 open Config
 open PgBind
 open DatasourceType
+open EntityType
+open ManagerType
+open QueryBuilder
+
 module Datasource = {
+  module Manager = {
+    // La fonction find renvoi l'ensemble des éléments de la table
+    let find = async (
+      entity: EntityType.t,
+      client: PgClient.t,
+      where: option<array<(string, Query.Params.t)>>,
+      limit: option<int>,
+    ) => {
+      let tableName = entity.name
+      let baseQuery = "SELECT * FROM " ++ tableName
+
+      // Construire la clause WHERE si nécessaire
+      let (whereClause, params) = QueryBuilder._buildWhereClause(~where, ~startIndex=1)
+      let statement = await QueryBuilder._buildSelectQuery(~tableName, ~where, ~limit, client)
+
+      let result = await QueryBuilder._executeQuery(~statement, ~params, client)
+      Promise.resolve(result.rows)
+    }
+
+    // La fonction findOne renvoi un élément de la table
+    let findOne = (entity: EntityType.t, client: PgClient.t, id: int) => {
+      let tableName = entity.name
+      let query = "SELECT * FROM " ++ tableName ++ " WHERE id = $1"
+      PgClient.query(
+        client,
+        ~statement=query,
+        ~params=[Belt.Int.toString(id)],
+      )->Promise.then(result => Js.Promise.resolve(result))
+    }
+    // La fonction save insère un nouvel élément dans la table
+    let save = (entity: EntityType.t, client: PgClient.t) => {
+      let tableName = entity.name
+      let query = "INSERT INTO " ++ tableName ++ " DEFAULT VALUES"
+      PgClient.query(client, ~statement=query, ~params=[])->Promise.then(_ => Js.Promise.resolve())
+    }
+
+    let make = (): ManagerType.t => {
+      {
+        find,
+        findOne,
+        save,
+      }
+    }
+  }
+
   let connect = (~config: option<Config.dbConfig>=?, ~isLocalEnv: option<bool>=?) => {
     let isLocalEnv = Belt.Option.getWithDefault(isLocalEnv, false)
 
@@ -109,7 +158,7 @@ module Datasource = {
     })
   }
 
-  let closeConnection = (client: PgClient.t) => {
+  let closeConnection = (client: PgClient.t): Js.Promise.t<unit> => {
     PgClient.end(client, ())
     ->Promise.then(_ => {
       Console.log("Connection closed")
@@ -122,7 +171,7 @@ module Datasource = {
   }
 
   let make = (~config: DatasourceType.defaultConfig): DatasourceType.t => {
-    let initialize = (): Js.Promise.t<unit> => {
+    let initialize = () => {
       Js.Promise.make((~resolve, ~reject) => {
         Js.log("Initializing connection to DB: " ++ config.database)
         if config.synchronize {
@@ -138,17 +187,11 @@ module Datasource = {
           (),
         )
 
-        // Connexion du client
         PgClient.connect(client, ())
         ->Promise.then(_ => {
           Console.log("Connected to the database")
-          resolve()
-          Js.Promise.resolve()
-        })
-        ->Promise.catch(e => {
-          Console.error2("Failed to connect to the database", e)
-          reject(e)
-          Js.Promise.resolve()
+          resolve(client)
+          Js.Promise.resolve(client)
         })
         ->ignore
       })
@@ -157,6 +200,7 @@ module Datasource = {
     {
       config, // Retourner la configuration
       initialize, // Retourner la fonction d'initialisation
+      manager: Manager.make(), // Retourner le manager
     }
   }
 }
