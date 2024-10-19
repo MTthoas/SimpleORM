@@ -3,7 +3,7 @@ external config: unit => unit = "config"
 
 // Bindings for process.env
 module NodeProcess = {
-  @bs.val external env: Js.Dict.t<string> = "process.env"
+  @val external env: Js.Dict.t<string> = "process.env"
 }
 
 module Config = {
@@ -31,11 +31,12 @@ module Config = {
     host: getEnvVar("DB_HOST", "localhost"),
     database: getEnvVar("DB_NAME", "db"),
     port: switch Js.Dict.get(NodeProcess.env, "DB_PORT") {
-      | Some(portString) => switch Int.fromString(portString) {
-          | Some(port) => port
-          | None => 5432
-        }
+    | Some(portString) =>
+      switch Int.fromString(portString) {
+      | Some(port) => port
       | None => 5432
+      }
+    | None => 5432
     },
   }
 }
