@@ -7,7 +7,6 @@ open QueryBuilder
 
 module Datasource = {
   module Manager = {
-    // La fonction find renvoi l'ensemble des éléments de la table
     let find = async (
       entity: EntityType.t,
       client: PgClient.t,
@@ -15,26 +14,18 @@ module Datasource = {
       limit: option<int>,
     ) => {
       let tableName = entity.name
-      let baseQuery = "SELECT * FROM " ++ tableName
-
-      // Construire la clause WHERE si nécessaire
-      let (whereClause, params) = QueryBuilder._buildWhereClause(~where, ~startIndex=1)
+      let (_, params) = QueryBuilder._buildWhereClause(~where, ~startIndex=1)
       let statement = await QueryBuilder._buildSelectQuery(~tableName, ~where, ~limit, client)
-
       let result = await QueryBuilder._executeQuery(~statement, ~params, client)
       Promise.resolve(result.rows)
     }
 
     // La fonction findOne renvoi un élément de la table
     let findOne = (entity: EntityType.t, client: PgClient.t, id: int) => {
-      let tableName = entity.name
-      let query = "SELECT * FROM " ++ tableName ++ " WHERE id = $1"
-      PgClient.query(
-        client,
-        ~statement=query,
-        ~params=[Belt.Int.toString(id)],
-      )->Promise.then(result => Js.Promise.resolve(result))
+      let whereClause = [("id", Query.Params.int(id))]
+      find(entity, client, Some(whereClause), Some(1))
     }
+
     // La fonction save insère un nouvel élément dans la table
     let save = (entity: EntityType.t, client: PgClient.t) => {
       let tableName = entity.name

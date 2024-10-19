@@ -40,18 +40,3 @@ jobs:
           export BUN_INSTALL="$HOME/.bun"
           export PATH="$BUN_INSTALL/bin:$PATH"
           bun run res:build
-
-      - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          export BUN_INSTALL="$HOME/.bun"
-          export PATH="$BUN_INSTALL/bin:$PATH"
-          npm publish --access public
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-      - name: Bump version and push tag
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          npm version patch
-          git push origin --tags

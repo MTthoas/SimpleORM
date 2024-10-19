@@ -1,6 +1,5 @@
 open Datasource
 open EntityType
-open PgBind
 
 let testDatasource = async () => {
   Js.log("Test de la fonction connect")
@@ -23,9 +22,8 @@ let testDatasource = async () => {
   let result = await dataSource.manager.find(EntityType.user, client, None, None)
   Js.log(result)
 
-  // Call find
-  //     let result = await dataSource.manager.find(EntityType.user, client)
-  //   Js.log(result)
+  let findOne = await dataSource.manager.findOne(EntityType.user, client, 2)
+  Js.log(findOne)
 }
 
 testDatasource()->ignore

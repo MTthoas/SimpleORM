@@ -9,7 +9,7 @@ module ManagerType = {
       option<array<(string, Query.Params.t)>>,
       option<int>,
     ) => promise<RescriptCore.Promise.t<array<Js.Json.t>>>,
-    findOne: (EntityType.t, PgClient.t, int) => RescriptCore.Promise.t<PgResult.t<EntityType.t>>,
+    findOne: (EntityType.t, PgClient.t, int) => promise<RescriptCore.Promise.t<array<Js.Json.t>>>,
     save: (EntityType.t, PgClient.t) => RescriptCore.Promise.t<unit>,
   }
 }
