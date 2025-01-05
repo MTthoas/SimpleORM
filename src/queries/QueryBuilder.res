@@ -187,7 +187,7 @@ module QueryBuilder = {
       } else {
         // Build the insert query
         let baseQuery =
-          "INSERT INTO " ++ tableName ++ " (" ++ fields->Array.join(", ") ++ ") VALUES ("
+          "INSERT INTO \"" ++ tableName ++ "\" (" ++ fields->Array.join(", ") ++ ") VALUES ("
         let valuePlaceholders =
           values->Belt.Array.mapWithIndex((index, _) => "$" ++ Js.Int.toString(index + 1))
         let query = baseQuery ++ valuePlaceholders->Array.join(", ") ++ ") RETURNING *"

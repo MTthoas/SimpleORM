@@ -13,8 +13,4 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    volumes:
-      - postgresql-auth-db:/var/lib/postgresql/data
 
-volumes:
-  postgresql-auth-db:

@@ -1,3 +1,5 @@
+open PgBind
+
 type sqlType =
   | Int
   | String
@@ -26,8 +28,9 @@ type tableSchema = {
 
 type tableOperations = {
   create: (~tableSchema: tableSchema) => string,
-  drop: (~tableName: string) => bool,
-  update: (~tableName: string, ~updates: columnSchema, ~conditions: columnSchema) => bool,
+  migrate: (~toWrite: string, ~client: PgClient.t) => Promise.t<unit>,
+  // drop: (~tableName: string) => bool,
+  // update: (~tableName: string, ~updates: columnSchema, ~conditions: columnSchema) => bool,
 }
 
 type queryOperations = {

@@ -1,11 +1,11 @@
-open User
-open Db
-open PgBind
 open Builder
 open Schema
+open Db
+open User
+open PgBind
 
 let userSchema: tableSchema = {
-  tableName: "Users",
+  tableName: "users",
   schema: [
     {
       name: "id",
@@ -52,7 +52,7 @@ let userSchema: tableSchema = {
 }
 
 let postSchema: tableSchema = {
-  tableName: "Posts",
+  tableName: "posts",
   schema: [
     {
       name: "id",
@@ -90,7 +90,7 @@ let postSchema: tableSchema = {
   foreignKeys: Some([
     {
       columnName: "user_id",
-      referencedTable: "Users",
+      referencedTable: "users",
       referencedColumn: "id",
     },
   ]),
@@ -98,52 +98,43 @@ let postSchema: tableSchema = {
 
 let userSQL = tableOperations.create(~tableSchema=userSchema)
 let userPostSQL = tableOperations.create(~tableSchema=postSchema)
-saveSchemaToFile(~fileName="migration.sql", ~toWrite=userSQL ++ userPostSQL)->ignore
 
 let testUser = async () => {
-  Js.log("Functionnal test for the User module, calling Repository functions")
-  /* Connection to the DB */
   let client = await connectToDb()
+  await tableOperations.migrate(~toWrite=userSQL ++ userPostSQL, ~client)
 
-  /* Get users */
-  let users = await User.getUsers(~limit=2, client)
-  Js.log(users)
-
-  /* Get user by ID */
-  let userById = await User.getUserById(~id=1, client)
-  Js.log(userById)
-
-  /* Create a user */
   let createUser = await User.createUser(
     ~fields=["name", "email"],
     ~values=[Query.Params.string("John Doe"), Query.Params.string("johnDoe@gmail.com")],
     client,
   )
-  Js.log(createUser)
+  Console.log(createUser)
 
-  /* Update user */
+  let users = await User.getUsers(~limit=2, client)
+  Console.log(users)
+
+  let userById = await User.getUserById(~id=1, client)
+  Console.log(userById)
+
   let updateUser = await User.updateUser(
     ~fields=["name"],
     ~values=[Query.Params.string("Jane Doe for ID 1")],
     ~where=[("id", Query.Params.int(12))],
     client,
   )
-  Js.log(updateUser)
+  Console.log(updateUser)
 
-  /* Update user by id, its more simple to use */
   let updateUserById = await User.updateUserById(
     ~fields=["name"],
     ~values=[Query.Params.string("Vans 1")],
     ~id=14,
     client,
   )
-  Js.log(updateUserById)
+  Console.log(updateUserById)
 
-  /* Delete user */
   let deleteUser = await User.deleteUserById(~id=15, client)
-  Js.log(deleteUser)
+  Console.log(deleteUser)
 
-  /* Close the connection */
   await closeConnection(client)
 }
 

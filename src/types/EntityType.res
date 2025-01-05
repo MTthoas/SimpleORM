@@ -1,6 +1,3 @@
-open ColumnType
-open ForeignKeyType
-
 module EntityType = {
   // Generic type
   type t = {
