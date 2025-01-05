@@ -98,9 +98,6 @@ module Repository = {
       client,
     )
 
-    Js.log("Statement: " ++ statement)
-    Js.log(params)
-
     let _ = await QueryBuilder._executeQuery(~statement, ~params, client)
     /* Get users then */
     let users = await find(~tableName, client)
