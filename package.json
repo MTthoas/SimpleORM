@@ -8,7 +8,7 @@
     "res:pretty": "rescript format -all",
     "res:dev": "rescript -w",
     "start": "bun src/app.res.js",
-    "test": "bun test tests/*.test.*",
+    "test": "bun test ./tests/*.test.*",
     "dev:app": "bun run --watch examples/NewApp.res.js",
     "dev": "bun run res:build && bun run res:pretty && concurrently 'bun:dev:*'",
     "apply": "bun run ./src/core/ApplyMigration.res.js"

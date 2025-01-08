@@ -184,6 +184,11 @@ module Datasource = {
           resolve(client)
           Js.Promise.resolve(client)
         })
+        ->Promise.catch(e => {
+          Console.error2("Failed to connect to the database", e)
+          reject(e)
+          Js.Promise.reject(e)
+        })
         ->ignore
       })
     }
