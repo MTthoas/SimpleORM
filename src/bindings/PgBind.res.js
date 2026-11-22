@@ -168,7 +168,7 @@ function getUniqueExn(res, logger, itemId, itemName) {
               if (item !== undefined) {
                 return Promise.resolve(Caml_option.valFromOption(item));
               } else {
-                logger.error("no " + itemName + " with ID " + itemId, Js_exn.raiseError("Not found"));
+                logger.error("no " + itemName + " with ID " + itemId, new Error("Not found"));
                 return Promise.reject({
                             RE_EXN_ID: PgNotFound,
                             name: itemName,
@@ -186,7 +186,7 @@ function getFirstValueExn(res, logger, valueName) {
               if (item !== undefined) {
                 var match = Js_dict.values(item);
                 if (match.length !== 1) {
-                  logger.error("Result is supposed to have only one field to get " + valueName + ", got ", Js_exn.raiseError(Object.keys(item).join(", ")));
+                  logger.error("Result is supposed to have only one field to get " + valueName + ", got ", new Error(Object.keys(item).join(", ")));
                   return Promise.reject({
                               RE_EXN_ID: PgNotFound,
                               name: valueName,
@@ -196,7 +196,7 @@ function getFirstValueExn(res, logger, valueName) {
                   return Promise.resolve(match[0]);
                 }
               }
-              logger.error("Got no result when looking for " + valueName, Js_exn.raiseError("Not found"));
+              logger.error("Got no result when looking for " + valueName, new Error("Not found"));
               return Promise.reject({
                           RE_EXN_ID: PgNotFound,
                           name: valueName,
@@ -215,7 +215,7 @@ function getFirstValue(res, logger, valueName) {
               }
               var match = Js_dict.values(item);
               if (match.length !== 1) {
-                logger.error("Result is supposed to have only one field to get " + valueName + ", got ", Js_exn.raiseError(Object.keys(item).join(", ")));
+                logger.error("Result is supposed to have only one field to get " + valueName + ", got ", new Error(Object.keys(item).join(", ")));
                 return Promise.reject({
                             RE_EXN_ID: PgNotFound,
                             name: valueName,
@@ -298,7 +298,7 @@ function make(user, password, host, database, port, connectionString, ssl, types
   if (idle_in_transaction_session_timeout !== undefined) {
     tmp.idle_in_transaction_session_timeout = idle_in_transaction_session_timeout;
   }
-  return new (Pg.default.Pool)(tmp);
+  return new (Pg.default.Client)(tmp);
 }
 
 var PgClient = {
@@ -397,25 +397,14 @@ var Callback = {
 };
 
 function connect$1(pgPool, withPgClient) {
-  return $$catch(pgPool.connect().then(function (pgClient) {
-                    return {
-                            TAG: "Ok",
-                            _0: pgClient
-                          };
-                  })).then(function (result) {
-              if (result.TAG !== "Ok") {
-                return Promise.reject(result._0);
-              }
-              var pgClient = result._0;
-              return $$catch(withPgClient(pgClient).then(function (x) {
+  return $$catch(pgPool.connect()).then(function (pgClient) {
+              return $$catch(withPgClient(pgClient).then(function (result) {
                                 return {
                                         TAG: "Ok",
-                                        _0: x
+                                        _0: result
                                       };
-                              })).then(function (result) {
-                          return $$catch(pgClient.end().then(function () {
-                                          return result;
-                                        }));
+                              })).finally(function () {
+                          pgClient.release();
                         });
             });
 }

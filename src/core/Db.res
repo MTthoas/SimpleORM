@@ -2,8 +2,18 @@ open PgBind
 open Config
 
 @module("fs")
-external readFileSync: string => string = "readFileSync"
+external readFileSync: (string, @as("utf8") _) => string = "readFileSync"
 
+/**
+ Opens a connection to PostgreSQL. Every setting defaults to the environment (see Config).
+ The connection stays open: close it with `closeConnection`.
+
+ @param user database user
+ @param password user password
+ @param host database host
+ @param database database name
+ @param port database port
+ */
 let connectToDb = (
   ~user=Config.defaultConfig.user,
   ~password=Config.defaultConfig.password,
@@ -16,41 +26,48 @@ let connectToDb = (
   PgClient.connect(client, ())
   ->Promise.then(_ => {
     Console.log("Connected to the database")
-    // Here we return the client, we doesnt close the connection
-    Js.Promise.resolve(client)
+    Promise.resolve(client)
   })
   ->Promise.catch(e => {
     Console.error2("Failed to connect to the database", e)
-    Js.Promise.reject(e)
+    Promise.reject(e)
   })
 }
 
+/**
+ @param client connection opened by `connectToDb`
+ */
 let closeConnection = (client: PgClient.t) => {
   PgClient.end(client, ())
   ->Promise.then(_ => {
     Console.log("Connection closed")
-    Js.Promise.resolve()
+    Promise.resolve()
   })
   ->Promise.catch(e => {
     Console.error2("Failed to close the connection", e)
-    Js.Promise.reject(e)
+    Promise.reject(e)
   })
 }
 
-let applyMigration = (onSuccess, onError, client: PgClient.t) => {
-  let migrationFile = "./migration.sql"
-  let migrationSQL = Buffer.fromString(readFileSync(migrationFile))->Buffer.toString
+/**
+ Runs ./migration.sql on the database.
 
-  Console.log("Applying migration...")
-  Console.log(migrationSQL)
+ @param onSuccess called with the query result
+ @param onError called with the error, which is then rethrown
+ @param client connected PostgreSQL client
+ */
+let applyMigration = async (onSuccess, onError, client: PgClient.t) => {
+  try {
+    let migrationSQL = readFileSync("./migration.sql")
 
-  PgClient.Params.query(~statement=migrationSQL, ~params=[], client)
-  ->Promise.then(res => {
-    onSuccess(res)
-    Js.Promise.resolve()
-  })
-  ->Promise.catch(err => {
+    Console.log("Applying migration...")
+    Console.log(migrationSQL)
+
+    let result = await PgClient.Params.query(~statement=migrationSQL, ~params=[], client)
+    onSuccess(result)
+  } catch {
+  | err =>
     onError(err)
-    Js.Promise.reject(err)
-  })
+    raise(err)
+  }
 }

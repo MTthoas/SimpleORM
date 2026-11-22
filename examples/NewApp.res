@@ -24,6 +24,8 @@ let testDatasource = async () => {
 
   let findOne = await dataSource.manager.findOne(EntityType.user, client, 2)
   Js.log(findOne)
+
+  await Datasource.closeConnection(client)
 }
 
 testDatasource()->ignore

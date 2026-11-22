@@ -8,9 +8,9 @@ module ManagerType = {
       PgClient.t,
       option<array<(string, Query.Params.t)>>,
       option<int>,
-    ) => promise<RescriptCore.Promise.t<array<Js.Json.t>>>,
-    findOne: (EntityType.t, PgClient.t, int) => promise<RescriptCore.Promise.t<array<Js.Json.t>>>,
-    save: (EntityType.t, PgClient.t) => RescriptCore.Promise.t<unit>,
+    ) => promise<array<Js.Json.t>>,
+    findOne: (EntityType.t, PgClient.t, int) => promise<option<Js.Json.t>>,
+    save: (EntityType.t, PgClient.t) => promise<unit>,
   }
 }
 
@@ -37,7 +37,7 @@ module DatasourceType = {
 
   type t = {
     config: defaultConfig,
-    initialize: unit => RescriptCore.Promise.t<PgClient.t>,
+    initialize: unit => promise<PgClient.t>,
     manager: ManagerType.t,
   }
 }

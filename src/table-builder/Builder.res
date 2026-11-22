@@ -1,49 +1,62 @@
 open Schema
 open PgBind
+open SqlEscape.SqlEscape
 
+/**
+ @param columnName column holding the reference
+ @param referencedTable referenced table
+ @param referencedColumn referenced column
+ @return the FOREIGN KEY constraint of a CREATE TABLE
+ */
 let _foreignKeyToSql = (
   ~columnName: string,
   ~referencedTable: string,
   ~referencedColumn: string,
 ): string =>
-  ",\n\tFOREIGN KEY (\"" ++
-  columnName ++
-  "\") REFERENCES \"" ++
-  referencedTable ++
-  "\"(\"" ++
-  referencedColumn ++ "\")"
+  "\tFOREIGN KEY (" ++
+  quoteIdentifier(columnName) ++
+  ") REFERENCES " ++
+  quoteIdentifier(referencedTable) ++
+  "(" ++
+  quoteIdentifier(referencedColumn) ++ ")"
 
-let _uniqueIndexToSql = (schema: array<columnSchema>, tableName: string): string => {
+/**
+ @param schema columns of the table
+ @param tableName table name
+ @return one CREATE UNIQUE INDEX per unique column, idempotent
+ */
+let _uniqueIndexToSql = (schema: array<columnSchema>, tableName: string): string =>
   schema
-  ->Array.filter(column => column.unique == true)
+  ->Array.filter(column => column.unique)
   ->Array.map(column =>
-    "CREATE UNIQUE INDEX " ++
-    tableName ++
-    "_" ++
-    column.name ++
-    "_key ON \"" ++
-    tableName ++
-    "\"(\"" ++
-    column.name ++ "\");"
+    "CREATE UNIQUE INDEX IF NOT EXISTS " ++
+    quoteIdentifier(tableName ++ "_" ++ column.name ++ "_key") ++
+    " ON " ++
+    quoteIdentifier(tableName) ++
+    "(" ++
+    quoteIdentifier(column.name) ++ ");"
   )
   ->Array.join("\n")
-}
 
+/**
+ Enum types are named after their column, with the first letter capitalized ("role" -> "Role").
+
+ @param name column name
+ @return the quoted enum type name
+ */
 let _customizedTypeToSql = (name: string): string =>
-  "\"" ++
-  switch String.get(name, 0) {
-  | Some(char) => String.toUpperCase(char)
-  | None => ""
-  } ++
-  String.slice(name, ~start=1, ~end=String.length(name)) ++ "\""
+  quoteIdentifier(String.charAt(name, 0)->String.toUpperCase ++ String.sliceToEnd(name, ~start=1))
 
-let _typeToSql = (name: string, sqlType: sqlType): string => {
+/**
+ @param name column name, used to name enum types
+ @param sqlType column type
+ */
+let _typeToSql = (name: string, sqlType: sqlType): string =>
   switch sqlType {
   | Int => "INTEGER"
   | String => "TEXT"
   | Enum(_) => _customizedTypeToSql(name)
   }
-}
 
 let _primaryKeyToSql = (column: columnSchema): string =>
   switch column.primaryKey {
@@ -57,62 +70,77 @@ let _optionalToSql = (column: columnSchema): string =>
   | false => " NOT NULL"
   }
 
-let _defaultToSql = (column: columnSchema): option<string> =>
+let _defaultToSql = (column: columnSchema): string =>
   switch column.default {
-  | Some(default) => Some(" DEFAULT " ++ "\'" ++ default ++ "\'")
-  | None => None
+  | Some(default) => " DEFAULT " ++ quoteLiteral(default)
+  | None => ""
   }
 
-let _createEnum = (name: string, sqlType: sqlType): option<string> => {
+// Dollar-quote tag of the DO blocks creating the enums
+let _enumBlockTag = "$enum$"
+
+/**
+ Creates an enum type, skipped if it already exists so the migration can be replayed.
+
+ @param name column name, used to name the type
+ @param sqlType column type
+ @return the DO block, or None if the type is not an enum
+ @raise InvalidLiteral if a value contains the DO block tag
+ */
+let _createEnum = (name: string, sqlType: sqlType): option<string> =>
   switch sqlType {
   | Enum(values) =>
+    let typeName = _customizedTypeToSql(name)
+    let labels = values->Array.map(quoteLiteral)->Array.join(", ")
+    if String.includes(typeName ++ labels, _enumBlockTag) {
+      raise(InvalidLiteral(typeName ++ " " ++ labels))
+    }
     Some(
-      "CREATE TYPE " ++
-      _customizedTypeToSql(name) ++
-      " AS ENUM (\'" ++
-      Array.join(values, "\', \'") ++ "\');",
+      "DO " ++
+      _enumBlockTag ++
+      " BEGIN\n\tCREATE TYPE " ++
+      typeName ++
+      " AS ENUM (" ++
+      labels ++
+      ");\nEXCEPTION\n\tWHEN duplicate_object THEN NULL;\nEND " ++
+      _enumBlockTag ++ ";",
     )
   | _ => None
   }
-}
 
+/**
+ @param schema columns of the table
+ @param foreignKeys optional foreign key constraints
+ @return the body of a CREATE TABLE
+ */
 let _columnsToSql = (
   ~schema: array<columnSchema>,
   ~foreignKeys: option<array<foreignKey>>,
-): string =>
-  schema
-  ->Array.map(column => {
+): string => {
+  let columns = schema->Array.map(column => {
     let primaryKey = _primaryKeyToSql(column)
-    // Ne pas inclure "NULL" ou "NOT NULL" si c'est une primary key
-    let schemaType = switch primaryKey {
-    | "" => _typeToSql(column.name, column._type)
-    | _ => "" // Pas de NULL ou NOT NULL pour les clés primaires
+    // SERIAL gives the type, and a primary key is never NULL
+    let (schemaType, optionnal) = switch primaryKey {
+    | "" => (_typeToSql(column.name, column._type), _optionalToSql(column))
+    | _ => ("", "")
     }
-    let optionnal = switch primaryKey {
-    | "" => _optionalToSql(column)
-    | _ => "" // Pas de NULL ou NOT NULL pour les clés primaires
-    }
-    let default = _defaultToSql(column)
-    switch default {
-    | Some(d) => "\t\"" ++ column.name ++ "\" " ++ schemaType ++ primaryKey ++ optionnal ++ d
-    | None => "\t\"" ++ column.name ++ "\" " ++ schemaType ++ primaryKey ++ optionnal
-    }
+    "\t" ++
+    quoteIdentifier(column.name) ++
+    " " ++
+    String.trimStart(schemaType ++ primaryKey ++ optionnal) ++
+    _defaultToSql(column)
   })
-  ->Array.join(",\n") ++
-    switch foreignKeys {
-    | Some(keys) =>
-      keys
-      ->Array.map(({columnName, referencedTable, referencedColumn}) =>
-        _foreignKeyToSql(~columnName, ~referencedTable, ~referencedColumn)
-      )
-      ->Array.join(",\n")
-    | None => ""
-    }
+  let constraints =
+    foreignKeys
+    ->Option.getOr([])
+    ->Array.map(({columnName, referencedTable, referencedColumn}) =>
+      _foreignKeyToSql(~columnName, ~referencedTable, ~referencedColumn)
+    )
+  columns->Array.concat(constraints)->Array.join(",\n")
+}
 
 @module("fs")
 external writeFileSync: (string, string) => unit = "writeFileSync"
-@module("fs")
-external readFileSync: string => string = "readFileSync"
 
 let _saveSchemaToFile = (~fileName: string, ~toWrite: string): bool => {
   writeFileSync(fileName, toWrite)
@@ -120,45 +148,57 @@ let _saveSchemaToFile = (~fileName: string, ~toWrite: string): bool => {
   true
 }
 
+/**
+ Generates the migration SQL of a table: its enums, the table and its unique indexes.
+ Every statement is idempotent, so the migration can be replayed.
+
+ @param tableName table name
+ @param schema columns of the table
+ @param foreignKey optional foreign key constraints
+ */
 let createTable = (
   ~tableName: string,
   ~schema: array<columnSchema>,
   ~foreignKey: option<array<foreignKey>>,
 ): string => {
-  let uniqueIndexes = _uniqueIndexToSql(schema, tableName)
-  let columnsToSql = _columnsToSql(~schema, ~foreignKeys=foreignKey)
-  let roles =
-    Array.map(schema, column => {
-      switch column._type {
-      | Enum(_) => _createEnum(column.name, column._type)
-      | _ => None
-      }
-    })
-    ->Array.filter(x => x->Belt.Option.isSome)
-    ->Array.map(x => x->Belt.Option.getExn)
+  let enums =
+    schema
+    ->Array.filterMap(column => _createEnum(column.name, column._type))
     ->Array.join("\n")
-  let userSchema = "\n" ++ "CREATE TABLE \"" ++ tableName ++ "\" (\n" ++ columnsToSql ++ "\n);\n"
-  roles ++ "\n" ++ userSchema ++ "\n" ++ uniqueIndexes
+  let table =
+    "CREATE TABLE IF NOT EXISTS " ++
+    quoteIdentifier(tableName) ++
+    " (\n" ++
+    _columnsToSql(~schema, ~foreignKeys=foreignKey) ++ "\n);"
+  [enums, table, _uniqueIndexToSql(schema, tableName)]
+  ->Array.filter(statement => statement !== "")
+  ->Array.join("\n")
+  ->String.concat("\n")
 }
 
 // let dropTable = (~tableName: string): bool => true
 // let updateTable = (~tableName: string, ~updates: columnSchema, ~conditions: columnSchema): bool =>
 //   true
 
+/**
+ Saves the SQL to migration.sql, then runs it on the database.
+
+ @param toWrite SQL generated by `createTable`
+ @param client connected PostgreSQL client
+ */
 let migrate = (~toWrite: string, ~client: PgClient.t) => {
   _saveSchemaToFile(~fileName="migration.sql", ~toWrite)->ignore
-  let migrationSQL = Buffer.fromString(readFileSync("migration.sql"))->Buffer.toString
 
   Console.log("Applying migration...")
-  Console.log(migrationSQL)
+  Console.log(toWrite)
 
-  PgClient.Params.query(~statement=migrationSQL, ~params=[], client)
+  PgClient.Params.query(~statement=toWrite, ~params=[], client)
   ->Promise.then(_ => {
     Console.log("Migration applied")
     Promise.resolve()
   })
   ->Promise.catch(err => {
-    Console.log("Failed to apply migration")
+    Console.error("Failed to apply migration")
     Promise.reject(err)
   })
 }
@@ -170,8 +210,7 @@ let tableOperations: tableOperations = {
       ~schema=tableSchema.schema,
       ~foreignKey=tableSchema.foreignKeys,
     ),
-  migrate: (~toWrite: string, ~client: PgClient.t) =>
-    migrate(~toWrite: string, ~client: PgClient.t),
+  migrate,
   // drop: (~tableName) => dropTable(~tableName),
   // update: (~tableName, ~updates, ~conditions) => updateTable(~tableName, ~updates, ~conditions),
 }

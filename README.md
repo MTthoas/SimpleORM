@@ -253,7 +253,7 @@ await tableOperations.migrate(~toWrite=userSQL ++ userPostSQL, ~client)
 await closeConnection(client)
 ```
 
-This creates the `users` and `posts` tables in the PostgreSQL database.
+This creates the `users` and `posts` tables in the PostgreSQL database. The generated SQL is idempotent (`IF NOT EXISTS`, enums skipped when they already exist), so the migration can be replayed safely.
 
 ---
 
@@ -272,7 +272,7 @@ let createUser = await User.createUser(
   client,
 )
 
-Console.log(createUser) // Logs the newly created user
+Console.log(createUser) // Logs the newly created user (returned by INSERT ... RETURNING *)
 await closeConnection(client)
 ```
 
@@ -291,7 +291,7 @@ Console.log(users) // Logs up to 2 users
 
 ```rescript
 let userById = await User.getUserById(~id=1, client)
-Console.log(userById) // Logs the user with ID 1
+Console.log(userById) // Some(user) with ID 1, or None if it does not exist
 ```
 
 ---
@@ -332,7 +332,7 @@ Console.log(updateUserById) // Logs the updated user
 
 ```rescript
 let deleteUser = await User.deleteUserById(~id=1, client)
-Console.log(deleteUser) // Logs confirmation of deletion
+Console.log(deleteUser) // Some(deletedUser), or None if no user has this ID
 ```
 
 ---
@@ -397,8 +397,10 @@ let testUser = async () => {
 Each function in the `User` module includes error handling to catch and handle issues such as:
 
 - Invalid table names
-- Missing `WHERE` clauses for updates
-- Non-existent records
+- Missing `WHERE` clauses: `update` and `delete` refuse to run without one, so a whole table is never modified by mistake
+- Unknown columns and negative limits
+
+Table and column names are always quoted and values are always sent as bound parameters, so neither can inject SQL.
 
 Errors are raised as exceptions (e.g., `ExceptionObject`) to ensure robust error reporting.
 

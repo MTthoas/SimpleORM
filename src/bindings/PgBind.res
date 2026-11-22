@@ -211,7 +211,7 @@ module Query = {
         GraphileLogger.error(
           logger,
           `no ${itemName} with ID ${itemId}`,
-          Exn.raiseError("Not found"),
+          Error.make("Not found")->Error.toException,
         )
         Promise.reject(PgNotFound({name: itemName, id: Some(itemId)}))
       | Some(item) => Promise.resolve(item)
@@ -234,7 +234,7 @@ module Query = {
         GraphileLogger.error(
           logger,
           "Got no result when looking for " ++ valueName,
-          Exn.raiseError("Not found"),
+          Error.make("Not found")->Error.toException,
         )
         Promise.reject(PgNotFound({name: valueName, id: None}))
       | Some(item) =>
@@ -244,7 +244,7 @@ module Query = {
           GraphileLogger.error(
             logger,
             `Result is supposed to have only one field to get ${valueName}, got `,
-            Exn.raiseError(Js.Dict.keys(item)->Array.join(", ")),
+            Error.make(Js.Dict.keys(item)->Array.join(", "))->Error.toException,
           )
           Promise.reject(PgNotFound({name: valueName, id: None}))
         }
@@ -271,7 +271,7 @@ module Query = {
           GraphileLogger.error(
             logger,
             `Result is supposed to have only one field to get ${valueName}, got `,
-            Exn.raiseError(Js.Dict.keys(item)->Array.join(", ")),
+            Error.make(Js.Dict.keys(item)->Array.join(", "))->Error.toException,
           )
           Promise.reject(PgNotFound({name: valueName, id: None}))
         }
@@ -384,12 +384,10 @@ module PgClient = {
     ~application_name: string=?, // The name of the application that created this Client instance
     ~connectionTimeoutMillis: int=?, // number of milliseconds to wait for connection=? default is no timeout
     ~idle_in_transaction_session_timeout: int=?, // number of milliseconds before terminating any session with an open idle transaction=? default is no timeout
-    ~connectionTimeoutMillis: int=?, // number of milliseconds to wait for connection, default is no timeout
-    ~idle_in_transaction_session_timeout: int=?, // number of milliseconds before terminating any session with an open idle transaction, default is no timeout
     unit,
   ) => config = ""
 
-  @scope("default") @new @module("pg") external make: config => t = "Pool"
+  @scope("default") @new @module("pg") external make: config => t = "Client"
 
   let make = (
     ~user=?, // default process.env.PGUSER || process.env.USER
@@ -460,8 +458,6 @@ module PgPool = {
     ~application_name: string=?, // The name of the application that created this Client instance
     ~connectionTimeoutMillis: int=?, // number of milliseconds to wait for connection=? default is no timeout
     ~idle_in_transaction_session_timeout: int=?, // number of milliseconds before terminating any session with an open idle transaction=? default is no timeout
-    ~connectionTimeoutMillis: int=?, // number of milliseconds to wait for connection, default is no timeout
-    ~idle_in_transaction_session_timeout: int=?, // number of milliseconds before terminating any session with an open idle transaction, default is no timeout
     ~idleTimeoutMillis: int=?, // number of milliseconds a client must sit idle in the pool and not be checked out
     // before it is disconnected from the backend and discarded
     // default is 10000 (10 seconds) - set to 0 to disable auto-disconnection of idle clients
@@ -566,22 +562,25 @@ module PgPool = {
   }
 
   @send
-  external connect: t => Js.Promise.t<PgClient.t> = "connect"
-  let connect = (pgPool, ~withPgClient) => {
+  external connect: t => promise<PgClient.t> = "connect"
+
+  // Gives a client checked out with `connect` back to the pool
+  @send external release: PgClient.t => unit = "release"
+
+  /**
+   Checks out a client, runs `withPgClient` with it, then always gives it back to the pool.
+
+   @param pgPool pool to take the client from
+   @param withPgClient work to run with the client
+   @return Ok with the result of `withPgClient`, rejected if it fails
+   */
+  let connect = (pgPool, ~withPgClient) =>
     connect(pgPool)
-    ->Promise.thenResolve(pgClient => Ok(pgClient))
     ->PgError.catch
-    ->Promise.then(result =>
-      switch result {
-      | Ok(pgClient) =>
-        withPgClient(pgClient)
-        ->Promise.thenResolve(x => Ok(x))
-        ->PgError.catch
-        ->Promise.then(result => {
-          PgClient.end(pgClient, ())->Promise.thenResolve(() => result)->PgError.catch
-        })
-      | Error(e) => Promise.reject(e)
-      }
+    ->Promise.then(pgClient =>
+      withPgClient(pgClient)
+      ->Promise.thenResolve(result => Ok(result))
+      ->PgError.catch
+      ->Promise.finally(() => release(pgClient))
     )
-  }
 }
