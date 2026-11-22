@@ -4,194 +4,141 @@ open DatasourceType
 open EntityType
 open ManagerType
 open QueryBuilder
+open SqlEscape
 
 module Datasource = {
   module Manager = {
+    /**
+     Récupère les lignes de la table d'une entité.
+
+     @param entity entité dont la table est lue
+     @param client client PostgreSQL connecté
+     @param where conditions WHERE optionnelles, (colonne, valeur) reliées par AND
+     @param limit nombre maximum de lignes, optionnel
+     */
     let find = async (
       entity: EntityType.t,
       client: PgClient.t,
       where: option<array<(string, Query.Params.t)>>,
       limit: option<int>,
-    ) => {
-      let tableName = entity.name
-      let (_, params) = QueryBuilder._buildWhereClause(~where, ~startIndex=1)
-      let statement = await QueryBuilder._buildSelectQuery(~tableName, ~where, ~limit, client)
+    ): array<Js.Json.t> => {
+      let (statement, params) = await QueryBuilder._buildSelectQuery(
+        ~tableName=entity.name,
+        ~where,
+        ~limit,
+        client,
+      )
       let result = await QueryBuilder._executeQuery(~statement, ~params, client)
-      Promise.resolve(result.rows)
+      result.rows
     }
 
-    // La fonction findOne renvoi un élément de la table
-    let findOne = (entity: EntityType.t, client: PgClient.t, id: int) => {
-      let whereClause = [("id", Query.Params.int(id))]
-      find(entity, client, Some(whereClause), Some(1))
+    /**
+     Récupère un élément de la table par sa colonne `id`.
+
+     @param entity entité dont la table est lue
+     @param client client PostgreSQL connecté
+     @param id valeur de la colonne `id`
+     @return l'élément, ou None s'il n'existe pas
+     */
+    let findOne = async (entity: EntityType.t, client: PgClient.t, id: int): option<Js.Json.t> => {
+      let rows = await find(entity, client, Some([("id", Query.Params.int(id))]), Some(1))
+      rows[0]
     }
 
-    // La fonction save insère un nouvel élément dans la table
-    let save = (entity: EntityType.t, client: PgClient.t) => {
-      let tableName = entity.name
-      let query = "INSERT INTO " ++ tableName ++ " DEFAULT VALUES"
-      PgClient.query(client, ~statement=query, ~params=[])->Promise.then(_ => Js.Promise.resolve())
+    /**
+     Insère un nouvel élément avec les valeurs par défaut de la table.
+
+     @param entity entité dont la table est remplie
+     @param client client PostgreSQL connecté
+     */
+    let save = async (entity: EntityType.t, client: PgClient.t): unit => {
+      let statement = "INSERT INTO " ++ SqlEscape.quoteIdentifier(entity.name) ++ " DEFAULT VALUES"
+      let _ = await PgClient.query(client, ~statement, ~params=[])
     }
 
     let make = (): ManagerType.t => {
-      {
-        find,
-        findOne,
-        save,
-      }
+      find,
+      findOne,
+      save,
     }
   }
 
+  /**
+   Choisit une valeur de connexion : celle de la config si elle est renseignée,
+   sinon la variable d'environnement en local, sinon la valeur par défaut.
+
+   @param value valeur fournie par la config, ignorée si vide
+   @param envKey variable d'environnement lue en local
+   @param default valeur par défaut
+   @param isLocalEnv lit les variables d'environnement si true
+   */
+  let _resolveSetting = (
+    ~value: option<string>,
+    ~envKey: string,
+    ~default: string,
+    ~isLocalEnv: bool,
+  ) =>
+    switch value {
+    | Some(value) if value !== "" => value
+    | _ if isLocalEnv => Config.getEnvVar(envKey, default)
+    | _ => default
+    }
+
+  /**
+   Ouvre une connexion à PostgreSQL. La connexion reste ouverte : la fermer avec `closeConnection`.
+
+   @param config paramètres de connexion, les champs vides prennent la valeur par défaut
+   @param isLocalEnv lit les variables d'environnement (DB_USER, DB_PASSWORD...) pour les champs vides
+   */
   let connect = (~config: option<Config.dbConfig>=?, ~isLocalEnv: option<bool>=?) => {
-    let isLocalEnv = Belt.Option.getWithDefault(isLocalEnv, false)
+    let isLocalEnv = isLocalEnv->Option.getOr(false)
+    let setting = (field, ~envKey, ~default) =>
+      _resolveSetting(~value=config->Option.map(field), ~envKey, ~default, ~isLocalEnv)
 
-    let user = switch config {
-    | Some(cfg) =>
-      if Js.String2.length(cfg.user) > 0 {
-        cfg.user
-      } else if isLocalEnv {
-        Config.getEnvVar("DB_USER", "admin")
-      } else {
-        "admin"
-      }
-    | None =>
-      if isLocalEnv {
-        Config.getEnvVar("DB_USER", "admin")
-      } else {
-        "admin"
-      }
-    }
+    let port =
+      setting(cfg => cfg.port > 0 ? Int.toString(cfg.port) : "", ~envKey="DB_PORT", ~default="5432")
+      ->Int.fromString
+      ->Option.getOr(5432)
 
-    let password = switch config {
-    | Some(cfg) =>
-      if Js.String2.length(cfg.password) > 0 {
-        cfg.password
-      } else if isLocalEnv {
-        Config.getEnvVar("DB_PASSWORD", "adminpwd")
-      } else {
-        "adminpwd"
-      }
-    | None =>
-      if isLocalEnv {
-        Config.getEnvVar("DB_PASSWORD", "adminpwd")
-      } else {
-        "adminpwd"
-      }
-    }
-
-    let database = switch config {
-    | Some(cfg) =>
-      if Js.String2.length(cfg.database) > 0 {
-        cfg.database
-      } else if isLocalEnv {
-        Config.getEnvVar("DB_NAME", "db")
-      } else {
-        "db"
-      }
-    | None =>
-      if isLocalEnv {
-        Config.getEnvVar("DB_NAME", "db")
-      } else {
-        "db"
-      }
-    }
-
-    let host = switch config {
-    | Some(cfg) =>
-      if Js.String2.length(cfg.host) > 0 {
-        cfg.host
-      } else if isLocalEnv {
-        Config.getEnvVar("DB_HOST", "localhost")
-      } else {
-        "localhost"
-      }
-    | None =>
-      if isLocalEnv {
-        Config.getEnvVar("DB_HOST", "localhost")
-      } else {
-        "localhost"
-      }
-    }
-
-    let port = switch config {
-    | Some(cfg) =>
-      if cfg.port > 0 {
-        cfg.port
-      } else if isLocalEnv {
-        switch Int.fromString(Config.getEnvVar("DB_PORT", "5432")) {
-        | Some(port) => port
-        | None => 5432
-        }
-      } else {
-        5432
-      }
-    | None =>
-      if isLocalEnv {
-        switch Int.fromString(Config.getEnvVar("DB_PORT", "5432")) {
-        | Some(port) => port
-        | None => 5432
-        }
-      } else {
-        5432
-      }
-    }
-
-    let client = PgClient.make(~user, ~password, ~database, ~host, ~port, ())
-
-    PgClient.connect(client, ())
-    ->Promise.then(_ => {
-      Console.log("Connected to the database")
-      Js.Promise.resolve(client) // Retourner le client PostgreSQL
-    })
-    ->Promise.catch(e => {
-      Console.error2("Failed to connect to the database", e)
-      Js.Promise.reject(e)
-    })
+    Db.connectToDb(
+      ~user=setting(cfg => cfg.user, ~envKey="DB_USER", ~default="admin"),
+      ~password=setting(cfg => cfg.password, ~envKey="DB_PASSWORD", ~default="adminpwd"),
+      ~database=setting(cfg => cfg.database, ~envKey="DB_NAME", ~default="db"),
+      ~host=setting(cfg => cfg.host, ~envKey="DB_HOST", ~default="localhost"),
+      ~port,
+    )
   }
 
-  let closeConnection = (client: PgClient.t): Js.Promise.t<unit> => {
-    PgClient.end(client, ())
-    ->Promise.then(_ => {
-      Console.log("Connection closed")
-      Js.Promise.resolve()
-    })
-    ->Promise.catch(e => {
-      Console.error2("Failed to close the connection", e)
-      Js.Promise.reject(e)
-    })
-  }
+  /**
+   @param client connexion ouverte par `connect` ou `initialize`
+   */
+  let closeConnection = (client: PgClient.t): promise<unit> => Db.closeConnection(client)
 
+  /**
+   Crée une datasource. La connexion n'est ouverte qu'à l'appel de `initialize`.
+
+   @param config configuration de la base et des entités
+   */
   let make = (~config: DatasourceType.defaultConfig): DatasourceType.t => {
     let initialize = () => {
-      Js.Promise.make((~resolve, ~reject) => {
-        Js.log("Initializing connection to DB: " ++ config.database)
-        if config.synchronize {
-          Js.log("Synchronizing database schema...")
-        }
+      Console.log("Initializing connection to DB: " ++ config.database)
+      if config.synchronize {
+        Console.log("Synchronizing database schema...")
+      }
 
-        let client = PgClient.make(
-          ~user=config.username,
-          ~password=config.password,
-          ~database=config.database,
-          ~host=config.host,
-          ~port=config.port,
-          (),
-        )
-
-        PgClient.connect(client, ())
-        ->Promise.then(_ => {
-          Console.log("Connected to the database")
-          resolve(client)
-          Js.Promise.resolve(client)
-        })
-        ->ignore
-      })
+      Db.connectToDb(
+        ~user=config.username,
+        ~password=config.password,
+        ~database=config.database,
+        ~host=config.host,
+        ~port=config.port,
+      )
     }
 
     {
-      config, // Retourner la configuration
-      initialize, // Retourner la fonction d'initialisation
-      manager: Manager.make(), // Retourner le manager
+      config,
+      initialize,
+      manager: Manager.make(),
     }
   }
 }

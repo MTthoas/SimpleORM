@@ -1,5 +1,4 @@
-import request from 'supertest';
-import Datasource  from '../src/datasource/Datasource.res.js';
+import {Datasource} from '../src/datasource/Datasource.res.js';
 
 let client;
 

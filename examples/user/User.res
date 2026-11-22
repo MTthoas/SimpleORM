@@ -4,152 +4,127 @@ open Repository
 module User = {
   exception ExceptionObject(string)
 
-  /* Fonction pour rechercher des utilisateurs avec des options WHERE et LIMIT */
+  /**
+   Convertit une erreur du repository en ExceptionObject, en gardant son message.
+
+   @param err l'exception attrapée
+   */
+  let _toExceptionObject = (err: exn): exn =>
+    switch err {
+    | ExceptionObject(_) => err
+    | Failure(message) => ExceptionObject(message)
+    | Exn.Error(jsError) =>
+      ExceptionObject(Exn.message(jsError)->Option.getOr("Erreur JS inconnue"))
+    | _ => ExceptionObject("Erreur inconnue")
+    }
+
+  /**
+   Recherche des utilisateurs.
+
+   @param where conditions WHERE optionnelles
+   @param limit nombre maximum d'utilisateurs, optionnel
+   @param client client PostgreSQL connecté
+   */
   let getUsers = async (
     ~where: option<array<(string, Query.Params.t)>>=?,
     ~limit: option<int>=?,
     client: PgClient.t,
-  ) => {
+  ) =>
     try {
-      let result = await Repository.find(
-        ~tableName="users",
-        ~where=where->Belt.Option.getWithDefault([]),
-        ~limit=limit->Belt.Option.getWithDefault(0),
-        client,
-      )
-      Promise.resolve(result)
+      await Repository.find(~tableName="users", ~where?, ~limit?, client)
     } catch {
-    | Exn.Error(err) =>
-      let errorMessage = switch Exn.message(err) {
-      | Some(message) => message
-      | None => "Erreur JS inconnue"
-      }
-      raise(ExceptionObject(errorMessage))
-    | Failure(message) => raise(ExceptionObject(message))
-    | _ => raise(ExceptionObject("Erreur inconnue"))
+    | err => raise(_toExceptionObject(err))
     }
-  }
 
-  /* Fonction pour rechercher un utilisateur par son identifiant */
-  let getUserById = async (~id: int, client: PgClient.t) => {
+  /**
+   Recherche un utilisateur par son identifiant.
+
+   @param id identifiant de l'utilisateur
+   @param client client PostgreSQL connecté
+   @return l'utilisateur, ou None s'il n'existe pas
+   */
+  let getUserById = async (~id: int, client: PgClient.t) =>
     try {
-      let whereClause = [("id", Query.Params.int(id))]
-      let result = await Repository.findOne(~tableName="users", ~where=whereClause, client)
-      Promise.resolve(result)
+      await Repository.findOne(~tableName="users", ~where=[("id", Query.Params.int(id))], client)
     } catch {
-    | Exn.Error(err) =>
-      let errorMessage = switch Exn.message(err) {
-      | Some(message) => message
-      | None => "Erreur JS inconnue"
-      }
-      raise(ExceptionObject(errorMessage))
-    | Failure(message) => raise(ExceptionObject(message))
-    | _ => raise(ExceptionObject("Erreur inconnue"))
+    | err => raise(_toExceptionObject(err))
     }
-  }
 
-  /* Fonction pour créer un utilisateur */
+  /**
+   Crée un utilisateur.
+
+   @param fields colonnes à remplir
+   @param values valeurs des colonnes, dans le même ordre
+   @param client client PostgreSQL connecté
+   @return l'utilisateur créé
+   */
   let createUser = async (
     ~fields: array<string>,
     ~values: array<Query.Params.t>,
     client: PgClient.t,
-  ) => {
+  ) =>
     try {
-      // Appeler la fonction insert dans le repository
-      let result = await Repository.insertOne(~tableName="users", ~fields, ~values, client)
-      Promise.resolve(result)
+      await Repository.insertOne(~tableName="users", ~fields, ~values, client)
     } catch {
-    | Exn.Error(err) =>
-      let errorMessage = switch Exn.message(err) {
-      | Some(message) => message
-      | None => "Erreur JS inconnue"
-      }
-      raise(ExceptionObject(errorMessage))
-    | Failure(message) => raise(ExceptionObject(message))
-    | _ => raise(ExceptionObject("Erreur inconnue"))
+    | err => raise(_toExceptionObject(err))
     }
-  }
 
-  /* Fonction pour mettre à jour un utilisateur */
+  /**
+   Met à jour les utilisateurs qui correspondent aux conditions.
+
+   @param fields colonnes à modifier
+   @param values nouvelles valeurs, dans le même ordre
+   @param where conditions WHERE, au moins une
+   @param client client PostgreSQL connecté
+   @return les utilisateurs modifiés
+   */
   let updateUser = async (
     ~fields: array<string>,
     ~values: array<Query.Params.t>,
     ~where: option<array<(string, Query.Params.t)>>=?,
     client: PgClient.t,
-  ) => {
+  ) =>
     try {
-      let whereConditions = where->Belt.Option.getWithDefault([])
-
-      // Vérifier que la clause WHERE n'est pas vide si elle est attendue
-      if whereConditions->Array.length === 0 {
+      if where->Option.getOr([])->Array.length === 0 {
         raise(ExceptionObject("La clause WHERE ne peut pas être vide pour une mise à jour."))
       }
-
-      // Appeler la fonction save dans le repository
-      let result = await Repository.update(
-        ~tableName="users",
-        ~fields,
-        ~values,
-        ~where=whereConditions,
-        client,
-      )
-      Promise.resolve(result)
+      await Repository.update(~tableName="users", ~fields, ~values, ~where?, client)
     } catch {
-    | Exn.Error(err) =>
-      let errorMessage = switch Exn.message(err) {
-      | Some(message) => message
-      | None => "Erreur JS inconnue"
-      }
-      raise(ExceptionObject(errorMessage))
-    | Failure(message) => raise(ExceptionObject(message))
-    | _ => raise(ExceptionObject("Erreur inconnue"))
+    | err => raise(_toExceptionObject(err))
     }
-  }
 
-  /* Fonction pour mettre à jour un utilisateur par un ID */
+  /**
+   Met à jour un utilisateur par son identifiant.
+
+   @param id identifiant de l'utilisateur
+   @param fields colonnes à modifier
+   @param values nouvelles valeurs, dans le même ordre
+   @param client client PostgreSQL connecté
+   @return l'utilisateur modifié, ou None s'il n'existe pas
+   */
   let updateUserById = async (
     ~id: int,
     ~fields: array<string>,
     ~values: array<Query.Params.t>,
     client: PgClient.t,
-  ) => {
+  ) =>
     try {
-      let whereClause = [("id", Query.Params.int(id))]
-      let result = await Repository.update(
-        ~tableName="users",
-        ~fields,
-        ~values,
-        ~where=whereClause,
-        client,
-      )
-      Promise.resolve(result)
+      await Repository.updateById(~tableName="users", ~fields, ~values, ~id, client)
     } catch {
-    | Exn.Error(err) =>
-      let errorMessage = switch Exn.message(err) {
-      | Some(message) => message
-      | None => "Erreur JS inconnue"
-      }
-      raise(ExceptionObject(errorMessage))
-    | Failure(message) => raise(ExceptionObject(message))
-    | _ => raise(ExceptionObject("Erreur inconnue"))
+    | err => raise(_toExceptionObject(err))
     }
-  }
 
-  /* Fonction pour supprimer un utilisateur */
-  let deleteUserById = async (~id: int, client: PgClient.t) => {
+  /**
+   Supprime un utilisateur par son identifiant.
+
+   @param id identifiant de l'utilisateur
+   @param client client PostgreSQL connecté
+   @return l'utilisateur supprimé, ou None s'il n'existe pas
+   */
+  let deleteUserById = async (~id: int, client: PgClient.t) =>
     try {
-      let whereClause = [("id", Query.Params.int(id))]
-      let result = await Repository.delete(~tableName="users", ~where=whereClause, client)
-      Promise.resolve(result)
+      await Repository.deleteById(~tableName="users", ~id, client)
     } catch {
-    | Exn.Error(err) =>
-      let errorMessage = switch Exn.message(err) {
-      | Some(message) => message
-      | None => "Erreur JS inconnue"
-      }
-      raise(ExceptionObject(errorMessage))
-    | Failure(message) => raise(ExceptionObject(message))
-    | _ => raise(ExceptionObject("Erreur inconnue"))
+    | err => raise(_toExceptionObject(err))
     }
-  }
 }

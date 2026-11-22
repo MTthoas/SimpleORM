@@ -2,94 +2,104 @@ open PgBind
 open QueryBuilder
 
 module Repository = {
-  exception InvalidTableName(string)
-  exception TableDoesNotExist(string)
-  exception InvalidLimit(int)
-  exception InvalidWhereCondition
+  /**
+   Finds rows in a PostgreSQL table.
 
-  /* Generic function to find records in a PostgreSQL table */
+   @param tableName exact table name
+   @param where optional WHERE conditions as (column, value) pairs, joined with AND
+   @param limit optional maximum number of rows, must be >= 0
+   @param client connected PostgreSQL client
+   @raise Failure if the query cannot be built or executed
+   */
   let find = async (
     ~tableName: string,
     ~where: option<array<(string, Query.Params.t)>>=?,
     ~limit: option<int>=?,
     client: PgClient.t,
-  ) => {
-    try {
-      let (_, params) = QueryBuilder._buildWhereClause(~where, ~startIndex=1)
-      let statement = await QueryBuilder._buildSelectQuery(~tableName, ~where, ~limit, client)
-      let result = await QueryBuilder._executeQuery(~statement, ~params, client)
-      Promise.resolve(result.rows)
-    } catch {
-    | TableDoesNotExist(tableName) =>
-      let errorMsg = "Table " ++ tableName ++ " does not exist."
-      Promise.reject(Failure(errorMsg))
-    | InvalidLimit(limit) =>
-      let errorMsg = "Invalid limit: " ++ Js.Int.toString(limit)
-      Js.log("Error: " ++ errorMsg)
-      Promise.reject(Failure(errorMsg))
-    | InvalidTableName(message) =>
-      let errorMsg = "Invalid table name: " ++ message
-      Js.log("Error: " ++ errorMsg)
-      Promise.reject(Failure(errorMsg))
-    | InvalidWhereCondition =>
-      let errorMsg = "Invalid WHERE condition."
-      Js.log("Error: " ++ errorMsg)
-      Promise.reject(Failure(errorMsg))
-    | Failure(message) =>
-      Js.log("Error: " ++ message)
-      Promise.reject(Failure(message))
-    | Exn.Error(jsError) =>
-      let errorMessage = switch Exn.message(jsError) {
-      | Some(message) => message
-      | None => "Unknown JS error"
-      }
-      Js.log("Error: " ++ errorMessage)
-      Promise.reject(Failure(errorMessage))
-    | _ => Promise.reject(Failure("Unknown error"))
-    }
+  ): array<Js.Json.t> => {
+    let (statement, params) = await QueryBuilder._buildSelectQuery(
+      ~tableName,
+      ~where,
+      ~limit,
+      client,
+    )
+    let result = await QueryBuilder._executeQuery(~statement, ~params, client)
+    result.rows
   }
 
-  /* Find a single record */
+  /**
+   Finds the first row matching the conditions.
+
+   @param tableName exact table name
+   @param where WHERE conditions as (column, value) pairs, joined with AND
+   @param client connected PostgreSQL client
+   @return the row, or None if nothing matches
+   */
   let findOne = async (
     ~tableName: string,
     ~where: array<(string, Query.Params.t)>,
     client: PgClient.t,
-  ) => {
-    find(~tableName, ~where, ~limit=1, client)
+  ): option<Js.Json.t> => {
+    let rows = await find(~tableName, ~where, ~limit=1, client)
+    rows[0]
   }
 
-  /* Insert records into a PostgreSQL table */
+  /**
+   Inserts a row.
+
+   @param tableName exact table name
+   @param fields columns to fill
+   @param values values bound to `fields`, in the same order
+   @param client connected PostgreSQL client
+   @return the inserted rows
+   */
   let insert = async (
     ~tableName: string,
     ~fields: array<string>,
     ~values: array<Query.Params.t>,
     client: PgClient.t,
-  ) => {
+  ): array<Js.Json.t> => {
     let statement = await QueryBuilder._buildInsertQuery(~tableName, ~fields, ~values, client)
-    let _ = await QueryBuilder._executeQuery(~statement, ~params=values, client)
-    /* Get users then */
-    let users = await find(~tableName, client)
-    Promise.resolve(users)
+    let result = await QueryBuilder._executeQuery(~statement, ~params=values, client)
+    result.rows
   }
 
-  /* Insert a single record */
+  /**
+   Inserts a single row.
+
+   @param tableName exact table name
+   @param fields columns to fill
+   @param values values bound to `fields`, in the same order
+   @param client connected PostgreSQL client
+   @return the inserted row
+   */
   let insertOne = async (
     ~tableName: string,
     ~fields: array<string>,
     ~values: array<Query.Params.t>,
     client: PgClient.t,
-  ) => {
-    insert(~tableName, ~fields, ~values, client)
+  ): option<Js.Json.t> => {
+    let rows = await insert(~tableName, ~fields, ~values, client)
+    rows[0]
   }
 
-  /* Update records */
+  /**
+   Updates the rows matching the conditions. A WHERE clause is mandatory.
+
+   @param tableName exact table name
+   @param fields columns to update
+   @param values new values bound to `fields`, in the same order
+   @param where WHERE conditions, at least one
+   @param client connected PostgreSQL client
+   @return the updated rows
+   */
   let update = async (
     ~tableName: string,
     ~fields: array<string>,
     ~values: array<Query.Params.t>,
     ~where: option<array<(string, Query.Params.t)>>=?,
     client: PgClient.t,
-  ) => {
+  ): array<Js.Json.t> => {
     let (statement, params) = await QueryBuilder._buildUpdateQuery(
       ~tableName,
       ~fields,
@@ -97,41 +107,61 @@ module Repository = {
       ~where,
       client,
     )
-
-    let _ = await QueryBuilder._executeQuery(~statement, ~params, client)
-    /* Get users then */
-    let users = await find(~tableName, client)
-    Promise.resolve(users)
+    let result = await QueryBuilder._executeQuery(~statement, ~params, client)
+    result.rows
   }
 
-  /* Update by ID */
+  /**
+   Updates a row by its `id` column.
+
+   @param tableName exact table name
+   @param fields columns to update
+   @param values new values bound to `fields`, in the same order
+   @param id value of the `id` column
+   @param client connected PostgreSQL client
+   @return the updated row, or None if no row has this id
+   */
   let updateById = async (
     ~tableName: string,
     ~fields: array<string>,
     ~values: array<Query.Params.t>,
     ~id: int,
     client: PgClient.t,
-  ) => {
+  ): option<Js.Json.t> => {
     let where = [("id", Query.Params.int(id))]
-    update(~tableName, ~fields, ~values, ~where, client)
+    let rows = await update(~tableName, ~fields, ~values, ~where, client)
+    rows[0]
   }
 
-  /* Delete records */
+  /**
+   Deletes the rows matching the conditions. A WHERE clause is mandatory.
+
+   @param tableName exact table name
+   @param where WHERE conditions, at least one
+   @param client connected PostgreSQL client
+   @return the deleted rows
+   */
   let delete = async (
     ~tableName: string,
     ~where: option<array<(string, Query.Params.t)>>=?,
     client: PgClient.t,
-  ) => {
+  ): array<Js.Json.t> => {
     let (statement, params) = await QueryBuilder._buildDeleteQuery(~tableName, ~where, client)
-    let _ = await QueryBuilder._executeQuery(~statement, ~params, client)
-    /* Get users then */
-    let users = await find(~tableName, client)
-    Promise.resolve(users)
+    let result = await QueryBuilder._executeQuery(~statement, ~params, client)
+    result.rows
   }
 
-  /* Delete by ID */
-  let deleteById = async (~tableName: string, ~id: int, client: PgClient.t) => {
+  /**
+   Deletes a row by its `id` column.
+
+   @param tableName exact table name
+   @param id value of the `id` column
+   @param client connected PostgreSQL client
+   @return the deleted row, or None if no row has this id
+   */
+  let deleteById = async (~tableName: string, ~id: int, client: PgClient.t): option<Js.Json.t> => {
     let where = [("id", Query.Params.int(id))]
-    delete(~tableName, ~where, client)
+    let rows = await delete(~tableName, ~where, client)
+    rows[0]
   }
 }
